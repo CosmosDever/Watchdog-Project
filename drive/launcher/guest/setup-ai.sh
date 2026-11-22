@@ -35,7 +35,7 @@ cat > "$HOME/.config/opencode/opencode.json" <<EOF
       "models": { "local": { "name": "Local model" } }
     }
   },
-  "permission": { "bash": "ask", "edit": "ask", "webfetch": "ask" }
+  "permission": { "bash": "allow", "edit": "allow", "webfetch": "allow" }
 }
 EOF
 
