@@ -100,7 +100,7 @@ attach_data_disk() {
         mkdir -p "$ROOT/shared"
         "$QEMU_IMG" create -f qcow2 "$data" 100G >/dev/null || { echo "Warning: could not create the shared data disk."; return 0; }
     fi
-    DATA_ARGS=(-drive "file=$data,if=none,id=data0,format=qcow2,cache=writeback,discard=unmap" -device virtio-blk-pci,drive=data0,serial=watchdog-data)
+    DATA_ARGS=(-drive "file=$data,if=none,id=data0,format=qcow2,cache=writeback,discard=unmap" -device virtio-blk-pci,drive=data0,serial=watchdog-data,bootindex=9)
 }
 
 echo "System: $NAME ($MODE mode, $CPUS CPUs, $MEMORY MB RAM)"
@@ -150,10 +150,11 @@ if [ "$ARCH" = "arm64" ]; then
     exec "$QEMU" "${COMMON[@]}" "${MACHINE_ARGS[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"} ${DATA_ARGS[@]+"${DATA_ARGS[@]}"} "${DISPLAY_ARGS[@]}"
 fi
 
-DISK="$(find "$VM_DIR" -name '*.qcow2' -print -quit)"
+DISK="$(find "$VM_DIR" -name '*.qcow2' ! -name '._*' -print -quit)"
 [ -n "$DISK" ] || { echo "No .qcow2 in $VM_DIR"; exit 1; }
 attach_data_disk
 exec "$QEMU" "${COMMON[@]}" -machine q35 \
-    -drive "file=$DISK,if=virtio,format=qcow2,cache=writeback,discard=unmap" \
+    -drive "file=$DISK,if=none,id=osdisk,format=qcow2,cache=writeback,discard=unmap" \
+    -device virtio-blk-pci,drive=osdisk,bootindex=1 \
     ${DATA_ARGS[@]+"${DATA_ARGS[@]}"} \
     -device virtio-vga "${DISPLAY_ARGS[@]}"

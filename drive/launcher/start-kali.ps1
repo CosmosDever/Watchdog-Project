@@ -60,7 +60,8 @@ $qemuArgs = @(
     '-cpu', 'qemu64,-svm,+ssse3,+sse4.1,+sse4.2,+popcnt',
     '-smp', "$Cpus",
     '-m', "$MemoryMB",
-    '-drive', "file=$($disk.FullName),if=virtio,format=qcow2,cache=writeback,discard=unmap",
+    '-drive', "file=$($disk.FullName),if=none,id=osdisk,format=qcow2,cache=writeback,discard=unmap",
+    '-device', 'virtio-blk-pci,drive=osdisk,bootindex=1',
     '-netdev', "user,id=net0,tftp=$(Join-Path $root 'launcher\guest'),hostfwd=tcp:127.0.0.1:$SshPort-:22",
     '-device', 'virtio-net-pci,netdev=net0',
     '-device', 'qemu-xhci',
@@ -84,7 +85,7 @@ if (-not (Test-Path -LiteralPath $dataDisk)) {
 if (Test-Path -LiteralPath $dataDisk) {
     $qemuArgs += @(
         '-drive', "file=$dataDisk,if=none,id=data0,format=qcow2,cache=writeback,discard=unmap",
-        '-device', 'virtio-blk-pci,drive=data0,serial=watchdog-data'
+        '-device', 'virtio-blk-pci,drive=data0,serial=watchdog-data,bootindex=9'
     )
 }
 if ($Snapshot) { $qemuArgs += '-snapshot'; Write-Host 'Snapshot mode: changes are discarded on exit.' }
