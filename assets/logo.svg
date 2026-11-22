@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" width="640" height="200" role="img" aria-label="Watchdog">
+  <rect x="0" y="0" width="640" height="200" rx="24" fill="#0f1720"/>
+  <!-- shield -->
+  <path d="M110,34 L176,58 L176,104 C176,140 146,166 110,176 C74,166 44,140 44,104 L44,58 Z" fill="#2dd4bf"/>
+  <!-- paw print (dog) -->
+  <g fill="#0f1720">
+    <ellipse cx="110" cy="118" rx="23" ry="18"/>
+    <ellipse cx="86"  cy="92" rx="8.5" ry="12"/>
+    <ellipse cx="102" cy="80" rx="8.5" ry="12"/>
+    <ellipse cx="118" cy="80" rx="8.5" ry="12"/>
+    <ellipse cx="134" cy="92" rx="8.5" ry="12"/>
+  </g>
+  <!-- wordmark -->
+  <text x="212" y="108" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="58" font-weight="800" fill="#f1f5f9" letter-spacing="1">WATCHDOG</text>
+  <text x="214" y="140" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#2dd4bf" letter-spacing="4">PORTABLE SECURITY TESTING</text>
+</svg>

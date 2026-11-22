@@ -1,0 +1,18 @@
+# Keep line endings correct across OSes so scripts run where they are meant to.
+* text=auto eol=lf
+
+# Windows-only launchers stay CRLF
+*.bat        text eol=crlf
+*.ps1        text eol=crlf
+
+# Unix shell scripts and extension-less helpers must stay LF
+*.sh         text eol=lf
+*.command    text eol=lf
+watchdog-ai  text eol=lf
+new-engagement text eol=lf
+
+# Never treat these as text
+*.gguf binary
+*.qcow2 binary
+*.7z binary
+*.zip binary

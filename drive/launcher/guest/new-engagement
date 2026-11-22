@@ -1,0 +1,30 @@
+#!/bin/bash
+# Create a new engagement folder with its own scope.md and report folder.
+set -euo pipefail
+
+if [ $# -lt 1 ] || [ -z "$1" ]; then
+    echo "Usage: new-engagement <project-name>"
+    exit 1
+fi
+
+name="$1"
+dir="$HOME/engagement/$name"
+if [ -e "$dir" ]; then
+    echo "Already exists: $dir"
+    exit 1
+fi
+
+mkdir -p "$dir/report"
+cat > "$dir/scope.md" <<'EOF'
+# Engagement scope
+Client:
+Authorization reference:
+Testing window:
+In-scope targets:
+Out-of-scope targets:
+Restrictions:
+EOF
+
+echo "Created $dir"
+echo "Edit scope:  nano \"$dir/scope.md\""
+echo "Start work:  cd \"$dir\" && opencode"

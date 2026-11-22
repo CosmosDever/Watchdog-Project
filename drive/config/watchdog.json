@@ -1,0 +1,30 @@
+{
+  "drive": { "label": "WATCHDOG", "size_gb": 400 },
+
+  "os": {
+    "name": "kali",
+    "arch": "amd64",
+    "type": "qemu-image",
+    "url": "https://cdimage.kali.org/kali-2026.3/kali-linux-2026.3-qemu-amd64.7z",
+    "sha256": "6a73c8496064cc5e6b26a82084b7a7e6d0aea92047e555af34a9208fd430bae8"
+  },
+
+  "models": [
+    {
+      "name": "Qwen3.5-9B-Q4_K_M.gguf",
+      "role": "agent",
+      "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+      "sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+    },
+    {
+      "name": "WhiteRabbitNeo-V3-7B-Q4_K_M.gguf",
+      "role": "agent",
+      "tool_shim": true,
+      "url": "https://huggingface.co/bartowski/WhiteRabbitNeo_WhiteRabbitNeo-V3-7B-GGUF/resolve/main/WhiteRabbitNeo_WhiteRabbitNeo-V3-7B-Q4_K_M.gguf",
+      "sha256": "584bfc1f4c160928842866c566129f9789c4671af8e51a9e36ba0ebf10f24f41"
+    }
+  ],
+
+  "harness": { "name": "watchdog-ai", "endpoint": "http://10.0.2.2:8080/v1" },
+  "runtime": { "llm_port": 8080, "context_size": 16384, "flash_attention": true }
+}
