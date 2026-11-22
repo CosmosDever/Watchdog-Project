@@ -15,16 +15,28 @@ if [ -e "$dir" ]; then
 fi
 
 mkdir -p "$dir/report"
-cat > "$dir/scope.md" <<'EOF'
-# Engagement scope
-Client:
-Authorization reference:
-Testing window:
-In-scope targets:
-Out-of-scope targets:
-Restrictions:
+cat > "$dir/scope.md" <<EOF
+# Engagement scope — $name
+
+## Authorization
+Authorized testing of my own lab / targets I have written permission for.
+
+## In scope
+- <target URL or host and ports, e.g. http://127.0.0.1:42000>
+
+## Out of scope
+- Everything not listed above. No denial of service.
+
+## Rules of engagement
+- Read-only recon on in-scope targets proceeds without asking each time.
+- Ask once before state-changing actions (POST/PUT/DELETE, account changes,
+  uploads), credential brute-forcing, or anything that could disrupt the service.
+
+## Objectives
+- Map the app first (find the real /api and /rest routes from the JS bundles),
+  then test the OWASP Top 10. Evidence-based findings saved under ./report/.
 EOF
 
 echo "Created $dir"
 echo "Edit scope:  nano \"$dir/scope.md\""
-echo "Start work:  cd \"$dir\" && opencode"
+echo "Start work:  cd \"$dir\" && watchdog-ai"
