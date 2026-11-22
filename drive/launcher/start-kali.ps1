@@ -68,6 +68,25 @@ $qemuArgs = @(
     '-device', 'virtio-rng-pci'
 )
 $qemuArgs += @('-device', 'virtio-vga', '-display', 'none')
+
+# Shared data disk: the same /data in every OS and on every host. One VM at a time.
+# A problem here must never stop the VM from starting.
+$dataDisk = Join-Path $root 'shared\data.qcow2'
+if (-not (Test-Path -LiteralPath $dataDisk)) {
+    $qemuImg = Join-Path $bin 'qemu-img.exe'
+    if (Test-Path -LiteralPath $qemuImg) {
+        try {
+            $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dataDisk)
+            & $qemuImg create -f qcow2 $dataDisk 100G | Out-Null
+        } catch { Write-Host "Could not create the shared data disk: $_" -ForegroundColor Yellow }
+    }
+}
+if (Test-Path -LiteralPath $dataDisk) {
+    $qemuArgs += @(
+        '-drive', "file=$dataDisk,if=none,id=data0,format=qcow2,cache=writeback,discard=unmap",
+        '-device', 'virtio-blk-pci,drive=data0,serial=watchdog-data'
+    )
+}
 if ($Snapshot) { $qemuArgs += '-snapshot'; Write-Host 'Snapshot mode: changes are discarded on exit.' }
 
 Write-Host "System: $($selected.Name)  ($Mode mode, $Cpus CPUs, $MemoryMB MB RAM)" -ForegroundColor Cyan
