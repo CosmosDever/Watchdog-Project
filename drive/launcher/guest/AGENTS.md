@@ -47,15 +47,15 @@ memory of what is done and what is left.
   as work not completed — do not present a blocked leaf as a pass.
 
 ```
-# PTT — http://127.0.0.1:42000
-- [x] recon (web-recon) -> report/recon_map.md
+# PTT — <target from scope.md>
+- [x] recon (web-recon / nmap) -> report/recon_map.md
 - injection
-  - [!] SQLi /rest/products/search?q=        -> report/01-sqli.md
-  - [ ] SQLi login bypass /rest/user/login
+  - [!] SQLi on <query endpoint>?<param>=     -> report/01-sqli.md
+  - [ ] SQLi auth bypass on <login endpoint>
 - access control
-  - [~] login as a test user, then IDOR /rest/basket/{id}
+  - [~] register+login, then IDOR on <per-user object>/{id}
 - xss
-  - [ ] DOM XSS /#/search  (Firefox, not curl)
+  - [ ] DOM XSS on <reflected input>  (in Firefox, not curl)
 ```
 
 ## Autonomous engagement workflow
@@ -73,56 +73,58 @@ Do not pause to ask "should I continue" between phases — continue. Only stop f
 boundary above (out-of-scope target, or an action that would damage data/service).
 
 ## Methodology — MAP before you test
-A guessed path returning 404/500 does **not** mean the feature is absent — you have not
-found the real route yet. Enumerate first:
+Let what you find decide the path; do not assume every target is a web app. A guessed path or
+port returning nothing does not mean the feature is absent — you have not found it yet.
 
-1. **Fingerprint:** `whatweb URL`, `curl -sI URL`, `nmap -sV -sC TARGET`.
-2. **Find the REAL routes — run `web-recon URL` FIRST.** It fingerprints the app and
-   extracts the real `/api` and `/rest` routes from the JavaScript bundles (single-page apps
-   hide them there, not at guessable URLs) and saves them to `./report/recon_map.md`. Do NOT
-   skip it and do NOT guess routes by hand. If it returns no routes, then grep the bundles
-   yourself (`curl -s URL/ | grep -oE '[^" ]+\.js'`, then grep each for `/(api|rest)/...`).
-   Add content brute-force when useful: `ffuf -u URL/FUZZ -w
-   /usr/share/wordlists/dirb/common.txt`.
-3. Record each endpoint: method, parameters, auth needed, sample response. Map first.
+- **Host / network target:** `nmap -sV -sC -p- TARGET` to find open services, then enumerate
+  each with its own tool (smbclient/enum4linux, ftp, ssh, snmp-check, database clients, etc.).
+- **Web app target:** run `web-recon URL` FIRST — it fingerprints the app and extracts the real
+  `/api` and `/rest` routes from the JavaScript bundles (single-page apps hide them there, not
+  at guessable URLs) into `./report/recon_map.md`. Do NOT guess routes by hand. If it returns
+  nothing, grep the bundles yourself (`curl -s URL/ | grep -oE '[^" ]+\.js'`, then grep each for
+  `/(api|rest)/...`) and content-brute-force: `ffuf -u URL/FUZZ -w
+  /usr/share/wordlists/dirb/common.txt`.
+
+Record every endpoint/service: how to reach it, its parameters, whether auth is needed, and a
+sample response. Build this map before testing anything.
 
 ## Authenticate early — a session unlocks most tests
-IDOR, stored XSS, JWT, admin, baskets and orders all need a logged-in session. Get one BEFORE
-deciding those are untestable — do not block the whole engagement on "requires auth":
+Access control, per-user data, stored XSS and token/JWT tests all need a logged-in session, so
+get one BEFORE deciding those are untestable — do not block the engagement on "requires auth":
 
-1. **Register:** `curl -s -X POST URL/api/Users -H 'Content-Type: application/json' -d
-   '{"email":"t@t.tt","password":"Passw0rd!","passwordRepeat":"Passw0rd!","securityAnswer":"x"}'`
-   (adjust the fields to what the app actually expects — read the 400/422 error if it rejects).
-2. **Log in:** `curl -s -X POST URL/rest/user/login -H 'Content-Type: application/json' -d
-   '{"email":"t@t.tt","password":"Passw0rd!"}'` → copy the `token` (JWT) from the JSON reply.
-3. **Use it everywhere:** add `-H "Authorization: Bearer <token>"` to every protected request.
+1. **Register, then log in** at the app's sign-up and login endpoints (find them in the recon
+   map). Read the login response and capture whatever the app uses for a session: a JWT `token`,
+   a `Set-Cookie`, or an API key. If registration is rejected, read the 400/422 body and match
+   the fields it asks for.
+2. **Reuse it on every protected request** — `-H "Authorization: Bearer <token>"`, the session
+   cookie (`-b "name=value"`), or the app's own auth header.
 
-A **login SQL-injection bypass** is its own finding: put the injection in the EMAIL field with
-any password (e.g. email `' OR 1=1--`). A correct payload logs you in (often as the first/admin
-user); a 500 SQL error means your quoting is wrong — fix the payload, do not give up.
+A **login injection bypass** is its own finding: put an SQL/NoSQL payload in the username/email
+field with any password (e.g. `' OR 1=1--`, or `{"$ne": null}` for NoSQL). A correct payload
+logs you in (often as the first/admin user); a 500/SQL error means your quoting is off — fix the
+payload, do not give up.
 
 ## Methodology — test by class
 `curl` alone misses browser-driven bugs. Match the tool to the bug:
 
-- **SQL / NoSQL injection:** test the REAL search/login/parameter endpoints from the recon
-  map (e.g. `/rest/products/search?q=`), not `/api/<Model>` list routes. You MUST run sqlmap
-  on every parameter before concluding "no SQLi" — a single manual quote is not enough:
-  `sqlmap -u "URL/rest/products/search?q=1" --batch --level 2 --risk 2`. For login bypass,
-  inject in the auth request body (e.g. email `' OR 1=1--`). If sqlmap stalls or times out,
-  do not stop at "injectable": a `SQLITE_ERROR`/`SQL syntax` in the response already confirms
-  it — then extract by hand with a UNION query (`q=qwert'))UNION SELECT ... FROM Users--`) or
-  `sqlmap ... --technique=U --dump -T Users` to actually pull the data.
+- **SQL / NoSQL injection:** test the REAL parameters from the recon map (search, filter, id,
+  login), not static list routes. You MUST run sqlmap on every parameter before concluding "no
+  SQLi" — a single manual quote is not enough: `sqlmap -u "URL/<path>?<param>=1" --batch --level
+  2 --risk 2`. For login bypass, inject in the auth request body. If sqlmap stalls or times out,
+  do not stop at "injectable": a `SQL`/`SQLITE_ERROR`/`syntax` message in the response already
+  confirms it — then extract by hand with a UNION query or `sqlmap ... --technique=U --dump -T
+  <table>` to actually pull the data.
 - **XSS:** DOM-based XSS runs in JavaScript and never shows in curl output — **Firefox is
   installed, so launch it** (`firefox URL &` or `firefox-esr URL &`); never mark XSS
   `[blocked: requires browser]`, that is a cop-out. For API/stored XSS (e.g. a persisted
   `<iframe>` payload), actually POST the payload to the real endpoint (authenticate first if
   needed), then load the page that renders it and confirm it fires. "No XSS" from curl alone
   is wrong.
-- **Broken access control / IDOR:** a 401/500 on an **unauthenticated** request does NOT mean
-  the endpoint is secure. You MUST register and log in first (POST to the login route), then
-  retest WITH the token: access another user's object by id (basket, order, profile) and
-  admin-only routes. Never write "properly protected" from unauthenticated requests alone. A
-  public product catalog is by design.
+- **Broken access control / IDOR:** a 401/500 on an **unauthenticated** request does NOT prove
+  the endpoint is secure. Log in first (above), then retest WITH the token: fetch another user's
+  object by id (cart, order, profile, message) and reach admin-only routes. Never write
+  "properly protected" from unauthenticated requests alone. A resource meant to be public is not
+  a finding.
 - **Auth / JWT:** capture the token, decode it, check the algorithm (`none`/alg-confusion),
   weak secret, expiry, privilege claims.
 - **Misconfiguration / exposure:** error/stack traces, debug endpoints, default creds,
@@ -164,5 +166,6 @@ already has a file. If it does, UPDATE that file — never create a second file 
 `*-sensitive-data-exposure.md`) for the same issue. Number files sequentially (`01-`, `02-`, …)
 with a unique slug, and keep one running count so the numbering does not repeat or jump.
 
-**Sanity check:** if you found almost nothing on a deliberately vulnerable target, your
-enumeration was incomplete — go back to "MAP before you test" and find the real routes.
+**Sanity check:** if you found little, suspect incomplete enumeration first — go back to "MAP
+before you test" and find the routes/services you missed before concluding the target is clean
+(especially on a known-vulnerable training target).
