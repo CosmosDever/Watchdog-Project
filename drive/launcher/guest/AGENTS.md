@@ -98,9 +98,13 @@ get one BEFORE deciding those are untestable — do not block the engagement on 
    the fields it asks for.
 2. **Reuse it on every protected request** — `-H "Authorization: Bearer <token>"`, the session
    cookie (`-b "name=value"`), or the app's own auth header.
+3. **The moment you hold a session, do the leaves that were waiting on it** — access control /
+   IDOR, per-user objects, admin routes, authed endpoints. Getting the token and then NOT using
+   it is the most common mistake; go run those leaves immediately, do not leave them `[ ]`.
 
-A **login injection bypass** is its own finding: put an SQL/NoSQL payload in the username/email
-field with any password (e.g. `' OR 1=1--`, or `{"$ne": null}` for NoSQL). A correct payload
+A **login injection bypass needs NO prior session** — it IS how you get in without credentials,
+so never mark it blocked-for-auth. Put an SQL/NoSQL payload in the username/email field with any
+password (e.g. `' OR 1=1--`, or `{"$ne": null}` for NoSQL). A correct payload
 logs you in (often as the first/admin user); a 500/SQL error means your quoting is off — fix the
 payload, do not give up.
 
@@ -131,8 +135,10 @@ payload, do not give up.
   verbose headers, exposed files.
 - **Exposed hashes / credentials:** before cracking, IDENTIFY the hash type (`hashid '<hash>'`
   or `hash-identifier`) and name it correctly in the report — do not call a 32-hex MD5
-  "plaintext" or "bcrypt". Crack with the matching hashcat mode (`-m 0` MD5, `-m 100` SHA1,
-  `-m 3200` bcrypt) against `/usr/share/wordlists/rockyou.txt`.
+  "plaintext" or "bcrypt". This applies to a password-looking field found ANYWHERE — a JSON
+  response or a decoded JWT payload: a 32-hex value is an MD5 hash, never label it "plaintext".
+  Crack with the matching hashcat mode (`-m 0` MD5, `-m 100` SHA1, `-m 3200` bcrypt) against
+  `/usr/share/wordlists/rockyou.txt`.
 
 ## Kali tool cheat-sheet (pick the right one)
 - **Recon/scan:** `nmap -sV -sC -p- TARGET` · `whatweb URL` · `curl -sI URL`
