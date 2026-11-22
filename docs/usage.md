@@ -43,6 +43,30 @@ cd ~/engagement/acme-web && watchdog-ai  # start the agent from inside the job f
 Tell the agent what to do within scope, e.g. "test the targets in scope.md step by step and
 save findings under report/". It explains each command and asks before touching the network.
 
+## Troubleshooting
+
+**The agent seems frozen / nothing happens.** Check the `start-llm` window. With a model
+served through the tool-call proxy it prints a line per request, e.g.
+`[toolshim] POST ... stream=True tools=11` then `[toolshim] backend 200 in 5.8s, ...`.
+If you see those, it is working — a local model is just slow on the first, long turn. If the
+GPU sits at 0% in Task Manager while VRAM is still used, generation already finished; the
+proxy keeps the connection alive with keepalives so the agent no longer hangs waiting.
+
+**`request (… tokens) exceeds the available context size (16384 tokens)`.** The conversation
+plus tool schemas outgrew the model's context window. Either raise it or trim:
+
+- Start the model with a bigger window (a quantized KV cache keeps it inside 8 GB VRAM):
+  `./launcher/start-llm.ps1 -ContextSize 32768` (this is now the default) or `-ContextSize 49152`.
+- In the agent, run `/compact` or `/new` periodically, and split long work into shorter
+  sessions instead of one endless thread.
+- Cloud models (Claude) have far larger context and avoid this entirely.
+
+**The agent chats instead of acting, or suggests wrong commands.** Small local 7–9B models
+are weak at driving tools. Prefer **Qwen** over WhiteRabbitNeo for the agent loop (Qwen emits
+native tool calls), be directive ("Proceed. Run step 1 now."), and for real multi-step work
+use a cloud model via [docs/configure.md](configure.md). WhiteRabbitNeo is better as a
+security-knowledge model you ask specific questions, not as the driver.
+
 ## Shut down safely
 
 The drive is exFAT (no journaling), so always:

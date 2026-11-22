@@ -4,8 +4,9 @@
 param(
     [string]$Model = '',
     [int]$Port = 8080,
-    [int]$ContextSize = 16384,
+    [int]$ContextSize = 32768,
     [int]$GpuLayers = -1,
+    [ValidateSet('f16', 'q8_0', 'q4_0')] [string]$KvCache = 'q8_0',
     [ValidateSet('auto', 'on', 'off')] [string]$Shim = 'auto',
     [switch]$SkipPreflight
 )
@@ -50,7 +51,10 @@ $useShim = switch ($Shim) {
 # Performance: offload all layers to GPU, flash attention on, threads = physical cores.
 $cores = [int](Get-CimInstance Win32_Processor | Measure-Object -Property NumberOfCores -Sum).Sum
 if ($cores -lt 1) { $cores = 4 }
+# Flash attention on (required for a quantized KV cache). A q8_0 KV cache roughly halves
+# the memory the context uses, so a large context still fits an 8 GB card.
 $perf = @('-fa', 'on', '-t', "$cores")
+if ($KvCache -ne 'f16') { $perf += @('--cache-type-k', $KvCache, '--cache-type-v', $KvCache) }
 $common = @('-m', $selected.FullName, '--alias', 'local', '-c', "$ContextSize", '--jinja') + $perf
 if ($GpuLayers -ge 0) { $common += @('-ngl', "$GpuLayers") }
 
@@ -59,7 +63,7 @@ if (Test-Port $Port) { throw "Port $Port is already in use. Is the LLM already r
 
 Write-Host "Model: $($selected.Name)"
 Write-Host "API:   http://127.0.0.1:$Port/v1 (from Kali: http://10.0.2.2:$Port/v1)"
-Write-Host "Perf:  GPU offload, flash-attn on, $cores threads, context $ContextSize"
+Write-Host "Perf:  GPU offload, flash-attn on, $cores threads, context $ContextSize, KV cache $KvCache"
 
 if (-not $useShim) {
     Write-Host 'Mode:  direct'

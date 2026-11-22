@@ -5,7 +5,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${LLM_PORT:-8080}"
-CONTEXT="${LLM_CONTEXT:-16384}"
+CONTEXT="${LLM_CONTEXT:-32768}"
+KVCACHE="${LLM_KVCACHE:-q8_0}"
 BUILD="b12625"
 case "$(uname -m)" in
     arm64) PLATFORM="macos-arm64" ;;
@@ -44,7 +45,10 @@ fi
 
 NAME="$(basename "$MODEL")"
 CORES="$(sysctl -n hw.physicalcpu 2>/dev/null || echo 4)"
+# Flash attention on (required for a quantized KV cache). A q8_0 KV cache roughly halves
+# the memory the context uses, so a large context still fits limited VRAM / unified memory.
 COMMON=(-m "$MODEL" --alias local -c "$CONTEXT" --jinja -fa on -t "$CORES" -ngl 99)
+[ "$KVCACHE" != "f16" ] && COMMON+=(--cache-type-k "$KVCACHE" --cache-type-v "$KVCACHE")
 
 USE_SHIM=0
 case "$NAME" in *WhiteRabbitNeo*|*DeepHat*) USE_SHIM=1 ;; esac
@@ -54,7 +58,7 @@ port_busy "$PORT" && { echo "Port $PORT is already in use. Is the LLM already ru
 
 echo "Model: $NAME"
 echo "API: http://127.0.0.1:$PORT/v1 (from Kali: http://10.0.2.2:$PORT/v1)"
-echo "Perf: Metal offload, flash-attn on, $CORES threads, context $CONTEXT"
+echo "Perf: Metal offload, flash-attn on, $CORES threads, context $CONTEXT, KV cache $KVCACHE"
 
 if [ "$USE_SHIM" -eq 0 ]; then
     echo "Mode: direct"

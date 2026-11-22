@@ -26,6 +26,21 @@ start the AI.
 You choose which model to load each time you start the AI; no re-provisioning needed to
 switch between models already on the drive.
 
+## Context window and VRAM
+
+The local server runs with a **32768-token** context and a **q8_0 KV cache** by default. The
+quantized KV cache roughly halves the memory the context uses, so a large window still fits an
+8 GB card. Tune it when you start the model:
+
+```powershell
+./launcher/start-llm.ps1 -ContextSize 49152            # bigger window, more VRAM
+./launcher/start-llm.ps1 -ContextSize 16384 -KvCache f16  # smaller window, full-precision cache
+```
+
+On macOS the same knobs are environment variables: `LLM_CONTEXT` and `LLM_KVCACHE`. If the
+model fails to load, lower `-ContextSize`; if you hit "exceeds the available context size",
+raise it (and see the troubleshooting notes in [usage.md](usage.md)).
+
 ## Use a cloud API (Claude, OpenAI, OpenRouter)
 
 The local model is the default, but you can point the harness at a hosted model when you

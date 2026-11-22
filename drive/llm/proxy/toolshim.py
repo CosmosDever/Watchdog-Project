@@ -2,9 +2,12 @@
 
 Some local models (e.g. WhiteRabbitNeo) print a tool call as a bare JSON object
 in the message content instead of the structured tool_calls field that agents need.
-This proxy sits between the agent (OpenCode) and llama-server, forwards each request
-with streaming disabled, extracts any tool call from the reply, and returns a proper
-tool_calls response — re-emitting it as an SSE stream when the client asked for one.
+This proxy sits between the agent (OpenCode) and llama-server. It buffers the full
+reply from the backend (so tool-call extraction is reliable), but keeps the client's
+streaming connection alive the whole time: it sends the SSE headers and an initial
+role delta immediately, then emits a keepalive comment every few seconds while the
+backend is still generating. That stops agents from timing out and hanging during a
+long generation. Each request is logged to the console so you can see what is going on.
 
 Usage: python -I toolshim.py --listen 127.0.0.1:8080 --backend 127.0.0.1:8081
 """
@@ -12,6 +15,7 @@ import argparse
 import json
 import re
 import sys
+import threading
 import time
 import urllib.request
 import uuid
@@ -21,6 +25,12 @@ BACKEND = "http://127.0.0.1:8081"
 FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
 TOOLTAG = re.compile(r"</?tool_call>", re.IGNORECASE)
 OBJECT = re.compile(r"\{.*\}", re.DOTALL)
+BACKEND_TIMEOUT = 900
+KEEPALIVE_SECONDS = 5
+
+
+def log(msg):
+    print("[toolshim] " + msg, flush=True)
 
 
 def tool_names(payload):
@@ -69,7 +79,7 @@ def extract_calls(content, names):
                 continue
             fn = item.get("function") if isinstance(item.get("function"), dict) else item
             name = fn.get("name")
-            if name in names and "arguments" in fn or name in names:
+            if name in names:
                 calls.append({
                     "id": "call_" + uuid.uuid4().hex[:24],
                     "type": "function",
@@ -82,7 +92,7 @@ def extract_calls(content, names):
 
 def backend_call(path, body, headers):
     req = urllib.request.Request(BACKEND + path, data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=900) as resp:
+    with urllib.request.urlopen(req, timeout=BACKEND_TIMEOUT) as resp:
         return resp.status, resp.read(), resp.headers.get("Content-Type", "application/json")
 
 
@@ -92,12 +102,28 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+    # --- low-level writes, guarded against a client that hung up -------------
+    def _write_raw(self, data):
+        try:
+            self.wfile.write(data)
+            self.wfile.flush()
+            return True
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return False
+
+    def _write_sse(self, obj):
+        return self._write_raw(("data: " + json.dumps(obj) + "\n\n").encode())
+
     def _send(self, status, body, ctype="application/json"):
-        self.send_response(status)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
 
     def _passthrough_get(self):
         req = urllib.request.Request(BACKEND + self.path, method="GET")
@@ -113,6 +139,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         raw = self.rfile.read(length)
+
+        # Anything that is not a chat completion is forwarded verbatim.
         if not self.path.startswith("/v1/chat/completions"):
             try:
                 status, body, ctype = backend_call(self.path, raw, {"Content-Type": "application/json"})
@@ -129,20 +157,25 @@ class Handler(BaseHTTPRequestHandler):
 
         want_stream = bool(payload.get("stream"))
         names = tool_names(payload)
+        model = payload.get("model", "local")
+        log(f"POST /v1/chat/completions stream={want_stream} tools={len(names)}")
+
+        if want_stream:
+            self._handle_stream(payload, names, model)
+        else:
+            self._handle_blocking(payload, names)
+
+    # --- blocking (non-streaming) path --------------------------------------
+    def _run_backend(self, payload, names):
         backend_payload = dict(payload)
         backend_payload["stream"] = False
         data = json.dumps(backend_payload).encode()
-
-        try:
-            status, body, _ = backend_call("/v1/chat/completions", data, {"Content-Type": "application/json"})
-        except Exception as exc:  # noqa: BLE001
-            self._send(502, json.dumps({"error": str(exc)}).encode())
-            return
-
+        started = time.time()
+        status, body, _ = backend_call("/v1/chat/completions", data, {"Content-Type": "application/json"})
+        took = time.time() - started
         if status != 200:
-            self._send(status, body)
-            return
-
+            log(f"backend {status} in {took:.1f}s")
+            return status, None, took
         result = json.loads(body)
         choice = (result.get("choices") or [{}])[0]
         message = choice.get("message", {})
@@ -152,37 +185,98 @@ class Handler(BaseHTTPRequestHandler):
                 message["tool_calls"] = calls
                 message["content"] = None
                 choice["finish_reason"] = "tool_calls"
+                log(f"backend 200 in {took:.1f}s, extracted {len(calls)} tool_call(s)")
+            else:
+                clen = len(message.get("content") or "")
+                log(f"backend 200 in {took:.1f}s, content {clen} chars")
+        else:
+            ncalls = len(message.get("tool_calls") or [])
+            log(f"backend 200 in {took:.1f}s, native tool_calls={ncalls}")
+        return 200, result, took
 
-        if not want_stream:
-            self._send(200, json.dumps(result).encode())
+    def _handle_blocking(self, payload, names):
+        try:
+            status, result, _ = self._run_backend(payload, names)
+        except Exception as exc:  # noqa: BLE001
+            log(f"backend error: {exc}")
+            self._send(502, json.dumps({"error": str(exc)}).encode())
             return
+        if result is None:
+            self._send(status, json.dumps({"error": f"backend returned {status}"}).encode())
+            return
+        self._send(200, json.dumps(result).encode())
 
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "close")
-        self.end_headers()
-        for chunk in self._stream_chunks(result, choice, message):
-            self.wfile.write(("data: " + json.dumps(chunk) + "\n\n").encode())
-        self.wfile.write(b"data: [DONE]\n\n")
-
-    def _stream_chunks(self, result, choice, message):
-        base = {"id": result.get("id", "chatcmpl-" + uuid.uuid4().hex[:24]),
+    # --- streaming path: keep the client warm while the backend works -------
+    def _handle_stream(self, payload, names, model):
+        base = {"id": "chatcmpl-" + uuid.uuid4().hex[:24],
                 "object": "chat.completion.chunk",
                 "created": int(time.time()),
-                "model": result.get("model", "local")}
-        yield {**base, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]}
+                "model": model}
+
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.close_connection = True
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            return
+
+        # First byte now, so the client's "time to first token" timer resets.
+        if not self._write_sse({**base, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]}):
+            log("client closed before first token")
+            return
+
+        holder = {}
+
+        def worker():
+            try:
+                holder["result"] = self._run_backend(payload, names)
+            except Exception as exc:  # noqa: BLE001
+                holder["error"] = exc
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+
+        # Heartbeat while the backend is still generating.
+        while thread.is_alive():
+            thread.join(timeout=KEEPALIVE_SECONDS)
+            if thread.is_alive():
+                if not self._write_raw(b": keepalive\n\n"):
+                    log("client hung up mid-generation (keepalive failed)")
+                    return
+
+        if "error" in holder:
+            log(f"backend error: {holder['error']}")
+            self._emit_text(base, f"[toolshim] backend error: {holder['error']}", "stop")
+            return
+
+        status, result, _ = holder["result"]
+        if result is None:
+            self._emit_text(base, f"[toolshim] backend returned {status}", "stop")
+            return
+
+        choice = (result.get("choices") or [{}])[0]
+        message = choice.get("message", {})
+
         if message.get("tool_calls"):
             for idx, call in enumerate(message["tool_calls"]):
                 delta = {"tool_calls": [{"index": idx, "id": call["id"], "type": "function",
-                                          "function": {"name": call["function"]["name"],
-                                                       "arguments": call["function"]["arguments"]}}]}
-                yield {**base, "choices": [{"index": 0, "delta": delta, "finish_reason": None}]}
-            yield {**base, "choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]}
+                                         "function": {"name": call["function"]["name"],
+                                                      "arguments": call["function"]["arguments"]}}]}
+                if not self._write_sse({**base, "choices": [{"index": 0, "delta": delta, "finish_reason": None}]}):
+                    return
+            self._write_sse({**base, "choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]})
+            self._write_raw(b"data: [DONE]\n\n")
         else:
-            content = message.get("content") or ""
-            yield {**base, "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]}
-            yield {**base, "choices": [{"index": 0, "delta": {}, "finish_reason": choice.get("finish_reason", "stop")}]}
+            self._emit_text(base, message.get("content") or "", choice.get("finish_reason", "stop"))
+
+    def _emit_text(self, base, content, finish_reason):
+        if not self._write_sse({**base, "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]}):
+            return
+        self._write_sse({**base, "choices": [{"index": 0, "delta": {}, "finish_reason": finish_reason}]})
+        self._write_raw(b"data: [DONE]\n\n")
 
 
 def main():
@@ -195,7 +289,10 @@ def main():
     host, port = args.listen.split(":")
     server = ThreadingHTTPServer((host, int(port)), Handler)
     print(f"toolshim listening on {args.listen}, backend {BACKEND}", flush=True)
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
