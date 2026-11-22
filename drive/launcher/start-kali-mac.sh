@@ -89,15 +89,28 @@ if [ "$ARCH" = "arm64" ]; then
     CODE="$SHARE/edk2-aarch64-code.fd"
     VARS="$VM_DIR/efivars.fd"
     [ -f "$CODE" ] || { echo "UEFI firmware not found: $CODE"; exit 1; }
-    DISK="$(find "$VM_DIR" -name '*.qcow2' -print -quit)"
+    # Skip macOS AppleDouble sidecars (._*) that appear on exFAT drives.
+    DISK="$(find "$VM_DIR" -name '*.qcow2' ! -name '._*' -print -quit)"
+    ISO="$(find "$VM_DIR" -name '*.iso' ! -name '._*' -print -quit)"
     INSTALL_ARGS=()
+    NEEDS_INSTALL=0
     if [ -z "$DISK" ]; then
-        ISO="$(find "$VM_DIR" -name '*.iso' -print -quit)"
         [ -n "$ISO" ] || { echo "No disk or installer in $VM_DIR"; exit 1; }
+        NEEDS_INSTALL=1
+    elif [ -n "$ISO" ]; then
+        # A disk with no guest data means a previous install never wrote anything.
+        # If the check fails, treat the disk as installed and leave the ISO out.
+        DISK_MAP="$("$QEMU_IMG" map --output=json "$DISK" 2>/dev/null)" || DISK_MAP='"data": true'
+        if ! grep -Eq '"data": *true' <<<"$DISK_MAP"; then NEEDS_INSTALL=1; fi
+    fi
+    if [ "$NEEDS_INSTALL" = "1" ]; then
         [ "$MODE" = "gui" ] || { echo "First run must use gui mode to install."; exit 1; }
-        echo "First run: creating the disk and starting the installer."
-        DISK="$VM_DIR/disk.qcow2"
-        "$QEMU_IMG" create -f qcow2 "$DISK" 100G
+        echo "First run: starting the installer."
+        echo "After choosing Install, the screen stays black. In the QEMU menu bar choose View > serial0 to see the installer."
+        if [ -z "$DISK" ]; then
+            DISK="$VM_DIR/disk.qcow2"
+            "$QEMU_IMG" create -f qcow2 "$DISK" 100G
+        fi
         INSTALL_ARGS=(-device virtio-scsi-pci -drive "file=$ISO,if=none,id=cd0,media=cdrom,readonly=on" -device scsi-cd,drive=cd0,bootindex=1)
     fi
     [ -f "$VARS" ] || cp "$SHARE/edk2-arm-vars.fd" "$VARS"
