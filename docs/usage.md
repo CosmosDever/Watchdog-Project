@@ -5,7 +5,7 @@
 Plug in the drive and from its root run:
 
 - Windows: `.\watchdog-run.bat` (in PowerShell) or double-click it.
-- macOS: `cd /Volumes/WATCHDOG && bash watchdog-run.command`, or right-click the file → Open.
+- macOS: `bash /Volumes/WATCHDOG/watchdog-run.command` from any folder, or right-click the file → Open.
 
 `watchdog-run` checks the machine, asks whether to also start the local AI, then opens Kali.
 You can also start pieces alone with the `Start ...` launchers.
@@ -31,6 +31,36 @@ work. Start the AI launcher on the host first if you want the local model reacha
 > Want zero typing even on the first boot? The provisioner can inject this with
 > `virt-customize --firstboot` at build time (needs libguestfs on the build machine). It is
 > not enabled by default — this one-time in-guest run is the simplest, most portable path.
+
+### Apple Silicon first install
+
+Mac uses the `kali-arm64` installer. After choosing **Install** the main window stays black.
+In the QEMU menu bar choose **View > serial0** to see the installer. If it returns to the
+installer menu after finishing, close the QEMU window and run `watchdog-run` again. The
+launcher then boots the installed disk without the ISO.
+
+### Clipboard on Mac
+
+Copy and paste work both ways in GUI mode after the one-time `setup-desktop.sh` step above
+and a Kali reboot. Use Command+C on the Mac and Ctrl+Shift+V in a Kali terminal, or Ctrl+Shift+C
+in Kali and Command+V on the Mac.
+
+## Share data between Windows and Mac
+
+Windows runs Kali `amd64` and Apple Silicon runs Kali `arm64`, so each keeps its own OS disk.
+Work files live on one shared disk, `shared/data.qcow2`, mounted at `/data`. The launcher
+attaches it automatically. Run this **once inside each Kali VM** after starting it with
+`watchdog-run`:
+
+```bash
+curl -fsS -o /tmp/data.sh tftp://10.0.2.2/setup-data.sh && bash /tmp/data.sh
+```
+
+`~/engagement` then points to `/data/engagement`. Existing engagement files are copied without
+overwriting, and the old folder is kept as `~/engagement.local-backup-<time>`.
+
+- Keep architecture-specific programs out of `/data`; install tools separately in each VM.
+- Only one VM can use the shared disk at a time. Shut Kali down before moving the drive.
 
 ## Run an engagement
 

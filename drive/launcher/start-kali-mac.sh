@@ -80,7 +80,29 @@ COMMON=(
     -device usb-tablet
     -device virtio-rng-pci
 )
-if [ "$MODE" = "gui" ]; then DISPLAY_ARGS=(-display cocoa); else DISPLAY_ARGS=(-display none); fi
+if [ "$MODE" = "gui" ]; then
+    # Two-way Mac and guest clipboard. The guest needs spice-vdagent (setup-desktop.sh).
+    DISPLAY_ARGS=(
+        -display cocoa
+        -device virtio-serial-pci
+        -chardev qemu-vdagent,id=vdagent,name=vdagent,clipboard=on
+        -device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+    )
+else
+    DISPLAY_ARGS=(-display none)
+fi
+
+# Shared data disk: the same /data in every OS and on every host. One VM at a time.
+DATA_ARGS=()
+attach_data_disk() {
+    local data="$ROOT/shared/data.qcow2"
+    if [ ! -f "$data" ]; then
+        mkdir -p "$ROOT/shared"
+        "$QEMU_IMG" create -f qcow2 "$data" 100G >/dev/null || { echo "Warning: could not create the shared data disk."; return 0; }
+    fi
+    DATA_ARGS=(-drive "file=$data,if=none,id=data0,format=qcow2,cache=writeback,discard=unmap" -device virtio-blk-pci,drive=data0,serial=watchdog-data)
+}
+
 echo "System: $NAME ($MODE mode, $CPUS CPUs, $MEMORY MB RAM)"
 echo "Shut down the VM before ejecting the drive."
 
@@ -112,6 +134,9 @@ if [ "$ARCH" = "arm64" ]; then
             "$QEMU_IMG" create -f qcow2 "$DISK" 100G
         fi
         INSTALL_ARGS=(-device virtio-scsi-pci -drive "file=$ISO,if=none,id=cd0,media=cdrom,readonly=on" -device scsi-cd,drive=cd0,bootindex=1)
+    else
+        # Never expose the shared disk to the OS installer, which could erase it.
+        attach_data_disk
     fi
     [ -f "$VARS" ] || cp "$SHARE/edk2-arm-vars.fd" "$VARS"
     MACHINE_ARGS=(
@@ -122,11 +147,13 @@ if [ "$ARCH" = "arm64" ]; then
         -device virtio-blk-pci,drive=hd0,bootindex=2
         -device virtio-gpu-pci
     )
-    exec "$QEMU" "${COMMON[@]}" "${MACHINE_ARGS[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"} "${DISPLAY_ARGS[@]}"
+    exec "$QEMU" "${COMMON[@]}" "${MACHINE_ARGS[@]}" ${INSTALL_ARGS[@]+"${INSTALL_ARGS[@]}"} ${DATA_ARGS[@]+"${DATA_ARGS[@]}"} "${DISPLAY_ARGS[@]}"
 fi
 
 DISK="$(find "$VM_DIR" -name '*.qcow2' -print -quit)"
 [ -n "$DISK" ] || { echo "No .qcow2 in $VM_DIR"; exit 1; }
+attach_data_disk
 exec "$QEMU" "${COMMON[@]}" -machine q35 \
     -drive "file=$DISK,if=virtio,format=qcow2,cache=writeback,discard=unmap" \
+    ${DATA_ARGS[@]+"${DATA_ARGS[@]}"} \
     -device virtio-vga "${DISPLAY_ARGS[@]}"
