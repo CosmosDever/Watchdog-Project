@@ -42,6 +42,9 @@ memory of what is done and what is left.
   needed a login — that is `[blocked: ...]` and counts as still open. "Requires auth" is never
   a valid skip: getting a session IS a task (see "Authenticate early") and it unlocks most of
   the other leaves, so do that first instead of blocking on it.
+- **`[!]` means VERIFIED.** Tag a leaf `[!]` only when you have reproduced the vulnerability
+  with a command and its real output. An untested or browser-blocked item is `[blocked: reason]`,
+  never `[!]` — do not claim a finding you did not confirm, and do not write its report file.
 - Never redo an `[x]` leaf and never re-report a `[!]` finding (this is what stops duplicate
   report files). Write `summary.md` from the `[!]` nodes, and list any `[blocked: ...]` leaves
   as work not completed — do not present a blocked leaf as a pass.
@@ -118,12 +121,14 @@ payload, do not give up.
   do not stop at "injectable": a `SQL`/`SQLITE_ERROR`/`syntax` message in the response already
   confirms it — then extract by hand with a UNION query or `sqlmap ... --technique=U --dump -T
   <table>` to actually pull the data.
-- **XSS:** DOM-based XSS runs in JavaScript and never shows in curl output — **Firefox is
-  installed, so launch it** (`firefox URL &` or `firefox-esr URL &`); never mark XSS
-  `[blocked: requires browser]`, that is a cop-out. For API/stored XSS (e.g. a persisted
-  `<iframe>` payload), actually POST the payload to the real endpoint (authenticate first if
-  needed), then load the page that renders it and confirm it fires. "No XSS" from curl alone
-  is wrong.
+- **XSS — split it in two, do the curl half first:**
+  - **(a) Stored / API XSS needs NO browser.** POST the payload (e.g. `<iframe
+    src="javascript:...">`) to the real endpoint with curl (authenticate first if needed), then
+    GET the record back and confirm the payload is stored **unescaped** in the response. That is
+    a verified finding — do these before touching a browser.
+  - **(b) Reflected / DOM XSS needs a real browser.** `firefox URL &` (or `firefox-esr`) is
+    installed — launch it and confirm the alert fires. Only if you genuinely cannot drive the
+    browser, mark it `[blocked: needs browser]` — never as a finding.
 - **Broken access control / IDOR:** a 401/500 on an **unauthenticated** request does NOT prove
   the endpoint is secure. Log in first (above), then retest WITH the token: fetch another user's
   object by id (cart, order, profile, message) and reach admin-only routes. Never write
