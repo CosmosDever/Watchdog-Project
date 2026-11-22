@@ -34,11 +34,17 @@ Pentesting Task Tree (PTT), keep an explicit tree in `./report/ptt.md` and treat
 memory of what is done and what is left.
 
 - After recon, write the tree: each in-scope target → the vulnerability classes to test →
-  concrete leaf tasks. Tag every leaf `[ ]` todo, `[~]` doing, `[x]` done, or `[!]` FINDING.
+  concrete leaf tasks. Tag every leaf `[ ]` todo, `[~]` doing, `[x]` done (you actually
+  performed it), `[!]` FINDING, or `[blocked: reason]` if something genuinely stops you.
 - **Re-read `ptt.md` at the start of every step.** Work the next `[ ]` leaf, then update its
   tag immediately. Add new leaves when recon or a result reveals new routes.
+- **Skipping is NOT done.** Never mark a leaf `[x]` because it was hard, needed a browser, or
+  needed a login — that is `[blocked: ...]` and counts as still open. "Requires auth" is never
+  a valid skip: getting a session IS a task (see "Authenticate early") and it unlocks most of
+  the other leaves, so do that first instead of blocking on it.
 - Never redo an `[x]` leaf and never re-report a `[!]` finding (this is what stops duplicate
-  report files). When every leaf is `[x]`/`[!]`, write `summary.md` from the `[!]` nodes.
+  report files). Write `summary.md` from the `[!]` nodes, and list any `[blocked: ...]` leaves
+  as work not completed — do not present a blocked leaf as a pass.
 
 ```
 # PTT — http://127.0.0.1:42000
@@ -62,8 +68,6 @@ step-by-step approval** — keep going on your own until the in-scope targets ar
 4. **Confirm & demonstrate impact** for each real vuln with a minimal, non-destructive proof.
 5. **Write each finding** to `./report/` and mark its leaf `[!]` — one file per vuln, no dupes.
 6. **Move to the next `[ ]` leaf**; when every leaf is done, write `./report/summary.md`.
-7. **Score yourself:** on OWASP Juice Shop run `juice-score <target>` to see how many
-   challenges you actually solved — treat a low score as unfinished work, not success.
 
 Do not pause to ask "should I continue" between phases — continue. Only stop for the Scope
 boundary above (out-of-scope target, or an action that would damage data/service).
@@ -82,6 +86,21 @@ found the real route yet. Enumerate first:
    /usr/share/wordlists/dirb/common.txt`.
 3. Record each endpoint: method, parameters, auth needed, sample response. Map first.
 
+## Authenticate early — a session unlocks most tests
+IDOR, stored XSS, JWT, admin, baskets and orders all need a logged-in session. Get one BEFORE
+deciding those are untestable — do not block the whole engagement on "requires auth":
+
+1. **Register:** `curl -s -X POST URL/api/Users -H 'Content-Type: application/json' -d
+   '{"email":"t@t.tt","password":"Passw0rd!","passwordRepeat":"Passw0rd!","securityAnswer":"x"}'`
+   (adjust the fields to what the app actually expects — read the 400/422 error if it rejects).
+2. **Log in:** `curl -s -X POST URL/rest/user/login -H 'Content-Type: application/json' -d
+   '{"email":"t@t.tt","password":"Passw0rd!"}'` → copy the `token` (JWT) from the JSON reply.
+3. **Use it everywhere:** add `-H "Authorization: Bearer <token>"` to every protected request.
+
+A **login SQL-injection bypass** is its own finding: put the injection in the EMAIL field with
+any password (e.g. email `' OR 1=1--`). A correct payload logs you in (often as the first/admin
+user); a 500 SQL error means your quoting is wrong — fix the payload, do not give up.
+
 ## Methodology — test by class
 `curl` alone misses browser-driven bugs. Match the tool to the bug:
 
@@ -93,10 +112,12 @@ found the real route yet. Enumerate first:
   do not stop at "injectable": a `SQLITE_ERROR`/`SQL syntax` in the response already confirms
   it — then extract by hand with a UNION query (`q=qwert'))UNION SELECT ... FROM Users--`) or
   `sqlmap ... --technique=U --dump -T Users` to actually pull the data.
-- **XSS:** you MUST test in **Firefox**, not curl — DOM-based XSS runs in JavaScript and never
-  shows in curl output. For API/stored XSS (e.g. a persisted `<iframe>` payload), actually
-  POST the payload to the real endpoint, then load the page that renders it and confirm it
-  fires. "No XSS" concluded from curl alone is wrong.
+- **XSS:** DOM-based XSS runs in JavaScript and never shows in curl output — **Firefox is
+  installed, so launch it** (`firefox URL &` or `firefox-esr URL &`); never mark XSS
+  `[blocked: requires browser]`, that is a cop-out. For API/stored XSS (e.g. a persisted
+  `<iframe>` payload), actually POST the payload to the real endpoint (authenticate first if
+  needed), then load the page that renders it and confirm it fires. "No XSS" from curl alone
+  is wrong.
 - **Broken access control / IDOR:** a 401/500 on an **unauthenticated** request does NOT mean
   the endpoint is secure. You MUST register and log in first (POST to the login route), then
   retest WITH the token: access another user's object by id (basket, order, profile) and
