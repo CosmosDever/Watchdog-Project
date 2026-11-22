@@ -80,7 +80,17 @@ COMMON=(
     -device usb-tablet
     -device virtio-rng-pci
 )
-if [ "$MODE" = "gui" ]; then DISPLAY_ARGS=(-display cocoa); else DISPLAY_ARGS=(-display none); fi
+if [ "$MODE" = "gui" ]; then
+    # Two-way Mac and guest clipboard. The guest needs spice-vdagent (setup-desktop.sh).
+    DISPLAY_ARGS=(
+        -display cocoa
+        -device virtio-serial-pci
+        -chardev qemu-vdagent,id=vdagent,name=vdagent,clipboard=on
+        -device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+    )
+else
+    DISPLAY_ARGS=(-display none)
+fi
 
 # Shared data disk: the same /data in every OS and on every host. One VM at a time.
 DATA_ARGS=()

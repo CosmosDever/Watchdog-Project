@@ -39,6 +39,12 @@ In the QEMU menu bar choose **View > serial0** to see the installer. If it retur
 installer menu after finishing, close the QEMU window and run `watchdog-run` again. The
 launcher then boots the installed disk without the ISO.
 
+### Clipboard on Mac
+
+Copy and paste work both ways in GUI mode after the one-time `setup-desktop.sh` step above
+and a Kali reboot. Use Command+C on the Mac and Ctrl+Shift+V in a Kali terminal, or Ctrl+Shift+C
+in Kali and Command+V on the Mac.
+
 ## Share data between Windows and Mac
 
 Windows runs Kali `amd64` and Apple Silicon runs Kali `arm64`, so each keeps its own OS disk.
