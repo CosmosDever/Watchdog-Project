@@ -106,4 +106,7 @@ The drive is exFAT (no journaling), so always:
 
 1. `sudo poweroff` inside Kali (or type `S` in the launcher window).
 2. Stop the AI window.
-3. Eject the drive from the OS before unplugging.
+3. Eject the drive before unplugging: double-click **`Eject Drive.bat`** (Windows) or
+   **`Eject Drive.command`** (macOS) at the drive root, or eject from the OS. These flush
+   pending writes and safely remove the drive; if one reports it could not eject, a Kali or AI
+   window is still open — close it and run the eject launcher again.
