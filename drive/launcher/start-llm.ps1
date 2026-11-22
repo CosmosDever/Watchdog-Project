@@ -55,7 +55,10 @@ if ($cores -lt 1) { $cores = 4 }
 # the memory the context uses, so a large context still fits an 8 GB card.
 $perf = @('-fa', 'on', '-t', "$cores")
 if ($KvCache -ne 'f16') { $perf += @('--cache-type-k', $KvCache, '--cache-type-v', $KvCache) }
-$common = @('-m', $selected.FullName, '--alias', 'local', '-c', "$ContextSize", '--jinja') + $perf
+# One slot (--parallel 1) so a single agent gets the whole context instead of ContextSize/N;
+# otherwise a long conversation overruns its per-slot share and the server reports
+# "Context size has been exceeded" well before the real limit.
+$common = @('-m', $selected.FullName, '--alias', 'local', '-c', "$ContextSize", '--parallel', '1', '--jinja') + $perf
 if ($GpuLayers -ge 0) { $common += @('-ngl', "$GpuLayers") }
 
 function Test-Port([int]$p) { [bool](Get-NetTCPConnection -State Listen -LocalPort $p -ErrorAction SilentlyContinue) }

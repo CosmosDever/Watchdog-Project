@@ -47,7 +47,10 @@ NAME="$(basename "$MODEL")"
 CORES="$(sysctl -n hw.physicalcpu 2>/dev/null || echo 4)"
 # Flash attention on (required for a quantized KV cache). A q8_0 KV cache roughly halves
 # the memory the context uses, so a large context still fits limited VRAM / unified memory.
-COMMON=(-m "$MODEL" --alias local -c "$CONTEXT" --jinja -fa on -t "$CORES" -ngl 99)
+# One slot (--parallel 1) so a single agent gets the whole context instead of CONTEXT/N;
+# otherwise a long conversation overruns its per-slot share and llama-server reports
+# "Context size has been exceeded" before the real limit.
+COMMON=(-m "$MODEL" --alias local -c "$CONTEXT" --parallel 1 --jinja -fa on -t "$CORES" -ngl 99)
 [ "$KVCACHE" != "f16" ] && COMMON+=(--cache-type-k "$KVCACHE" --cache-type-v "$KVCACHE")
 
 USE_SHIM=0
