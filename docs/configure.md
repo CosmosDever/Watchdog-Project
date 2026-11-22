@@ -76,3 +76,31 @@ are OS-agnostic; only the guest-side helper (`setup-ai.sh`) assumes `apt`.
 `harness.name` defaults to `opencode`, the tested one. Any OpenAI-compatible terminal agent
 (for example Aider) can point at the same `http://10.0.2.2:8080/v1` endpoint. Install it in
 the guest and set its base URL; the rest of Watchdog does not change.
+
+### HackingBuddyGPT as an alternative harness (advanced, needs internet once to install)
+
+[HackingBuddyGPT](https://github.com/ipa-lab/hackingBuddyGPT) is a research pentest-agent
+framework with purpose-built use-cases (`WebAPITesting`, `WebTestingWithShell`,
+`PrivEscLinux`). It runs **inside Kali** and can point its LLM at either Watchdog's local model
+or a cloud API. Install (Python 3.13+, requires network for the one-time `pip`):
+
+```bash
+git clone https://github.com/ipa-lab/hackingBuddyGPT && cd hackingBuddyGPT
+python -m venv venv && source venv/bin/activate && pip install -e .
+```
+
+Point it at the **local** Watchdog model (OpenAI-compatible via the toolshim):
+
+```bash
+wintermute WebAPITesting \
+  --llm.model=openai/local --llm.api_base=http://10.0.2.2:8080/v1 --llm.api_key=local
+```
+
+…or at a **cloud** model, e.g. `--llm.model=gpt-4o --llm.api_key=$OPENAI_API_KEY` (litellm
+format; `anthropic/claude-...` with `ANTHROPIC_API_KEY` works too). Local-shell use-cases need
+a tmux session first: `tmux new-session -s hb` then `--conn=local_shell --conn.tmux_session=hb`.
+It writes JSONL traces under `logs/`. Keep it pointed only at in-scope targets.
+
+> We looked at CAI (aliasrobotics/cai) too, but it was **archived in Aug 2026** and ships with
+> telemetry on by default, so it is a poor fit for an offline/private drive. HackingBuddyGPT is
+> the recommended alternative harness.

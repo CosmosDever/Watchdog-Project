@@ -40,7 +40,7 @@ cat > "$HOME/.config/opencode/opencode.json" <<EOF
 EOF
 
 # Pull the branded commands and the rules file from the drive.
-for item in watchdog-ai new-engagement web-recon; do
+for item in watchdog-ai new-engagement web-recon juice-score; do
     curl -fsS --connect-timeout 10 -o "$HOME/.local/bin/$item" "tftp://$HOST_IP/$item"
     chmod 755 "$HOME/.local/bin/$item"
 done
@@ -56,7 +56,7 @@ cat >> "$HOME/.zshrc" <<'HOOK'
 # watchdog-sync: keep the Watchdog agent current from the drive
 if [ -z "${WATCHDOG_SYNCED:-}" ]; then
   export WATCHDOG_SYNCED=1
-  for _h in watchdog-ai new-engagement web-recon; do
+  for _h in watchdog-ai new-engagement web-recon juice-score; do
     curl -fsS --connect-timeout 2 -o "$HOME/.local/bin/$_h" "tftp://10.0.2.2/$_h" 2>/dev/null && chmod +x "$HOME/.local/bin/$_h" 2>/dev/null
   done
   curl -fsS --connect-timeout 2 -o "$HOME/.config/opencode/AGENTS.md" "tftp://10.0.2.2/AGENTS.md" 2>/dev/null

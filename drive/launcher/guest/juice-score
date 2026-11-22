@@ -1,0 +1,25 @@
+#!/bin/bash
+# juice-score [url] — OWASP Juice Shop benchmark. Queries the app's own challenge list
+# (/api/Challenges) and reports how many challenges are currently marked solved, so you can
+# measure real progress objectively instead of eyeballing the report. Juice Shop only.
+set -uo pipefail
+URL="${1:-http://127.0.0.1:42000}"; URL="${URL%/}"
+
+J="$(curl -s "$URL/api/Challenges" 2>/dev/null)"
+[ -n "$J" ] || { echo "No response from $URL/api/Challenges — is Juice Shop running at $URL ?"; exit 1; }
+
+if command -v jq >/dev/null 2>&1; then
+    total="$(printf '%s' "$J" | jq '.data | length' 2>/dev/null)"
+    [ -n "${total:-}" ] && [ "$total" != "null" ] || { echo "Unexpected response (not Juice Shop /api/Challenges?)."; exit 1; }
+    solved="$(printf '%s' "$J" | jq '[.data[] | select(.solved==true)] | length')"
+    echo "Juice Shop score: $solved / $total challenges solved"
+    if [ "$solved" -gt 0 ]; then
+        echo
+        echo "Solved:"
+        printf '%s' "$J" | jq -r '.data[] | select(.solved==true) | "  [x] (\(.difficulty)★) \(.name)"'
+    fi
+else
+    total="$(printf '%s' "$J" | grep -o '"id":' | wc -l)"
+    solved="$(printf '%s' "$J" | grep -o '"solved":true' | wc -l)"
+    echo "Juice Shop score: $solved / $total challenges solved   (install jq for the solved list)"
+fi

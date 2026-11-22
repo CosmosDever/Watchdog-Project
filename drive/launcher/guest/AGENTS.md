@@ -28,16 +28,42 @@ Report only what a command actually returned. **Never invent endpoints, results,
 numbers.** A finding needs a reproducible command and its real output as evidence. If you
 are unsure a CVE applies, write "unverified" rather than guessing an ID.
 
+## Keep a task tree — your external memory (do this, it is not optional)
+You WILL lose track over a long engagement and start repeating work. Inspired by PentestGPT's
+Pentesting Task Tree (PTT), keep an explicit tree in `./report/ptt.md` and treat it as your
+memory of what is done and what is left.
+
+- After recon, write the tree: each in-scope target → the vulnerability classes to test →
+  concrete leaf tasks. Tag every leaf `[ ]` todo, `[~]` doing, `[x]` done, or `[!]` FINDING.
+- **Re-read `ptt.md` at the start of every step.** Work the next `[ ]` leaf, then update its
+  tag immediately. Add new leaves when recon or a result reveals new routes.
+- Never redo an `[x]` leaf and never re-report a `[!]` finding (this is what stops duplicate
+  report files). When every leaf is `[x]`/`[!]`, write `summary.md` from the `[!]` nodes.
+
+```
+# PTT — http://127.0.0.1:42000
+- [x] recon (web-recon) -> report/recon_map.md
+- injection
+  - [!] SQLi /rest/products/search?q=        -> report/01-sqli.md
+  - [ ] SQLi login bypass /rest/user/login
+- access control
+  - [~] login as a test user, then IDOR /rest/basket/{id}
+- xss
+  - [ ] DOM XSS /#/search  (Firefox, not curl)
+```
+
 ## Autonomous engagement workflow
 With a valid `scope.md`, run the whole engagement end-to-end **without stopping for
 step-by-step approval** — keep going on your own until the in-scope targets are covered:
 
 1. **Recon & map** every in-scope target — start by running `web-recon <target>`.
-2. **Enumerate** services, endpoints, parameters, and auth.
-3. **Test each class** (below), picking the right tool.
+2. **Build `report/ptt.md`** from the recon map (the task tree above).
+3. **Test each class** (below) by working the tree leaf by leaf, picking the right tool.
 4. **Confirm & demonstrate impact** for each real vuln with a minimal, non-destructive proof.
-5. **Write each finding** to `./report/` as you go.
-6. **Move to the next vector**; when the scope is covered, write `./report/summary.md`.
+5. **Write each finding** to `./report/` and mark its leaf `[!]` — one file per vuln, no dupes.
+6. **Move to the next `[ ]` leaf**; when every leaf is done, write `./report/summary.md`.
+7. **Score yourself:** on OWASP Juice Shop run `juice-score <target>` to see how many
+   challenges you actually solved — treat a low score as unfinished work, not success.
 
 Do not pause to ask "should I continue" between phases — continue. Only stop for the Scope
 boundary above (out-of-scope target, or an action that would damage data/service).
