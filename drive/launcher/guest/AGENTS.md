@@ -32,7 +32,7 @@ are unsure a CVE applies, write "unverified" rather than guessing an ID.
 With a valid `scope.md`, run the whole engagement end-to-end **without stopping for
 step-by-step approval** — keep going on your own until the in-scope targets are covered:
 
-1. **Recon & map** every in-scope target.
+1. **Recon & map** every in-scope target — start by running `web-recon <target>`.
 2. **Enumerate** services, endpoints, parameters, and auth.
 3. **Test each class** (below), picking the right tool.
 4. **Confirm & demonstrate impact** for each real vuln with a minimal, non-destructive proof.
@@ -47,28 +47,32 @@ A guessed path returning 404/500 does **not** mean the feature is absent — you
 found the real route yet. Enumerate first:
 
 1. **Fingerprint:** `whatweb URL`, `curl -sI URL`, `nmap -sV -sC TARGET`.
-2. **Find the REAL routes.** Single-page apps (Angular/React/Vue) hide API paths inside
-   JavaScript bundles, not at guessable URLs. Pull the JS and grep it:
-   ```
-   curl -s URL/ | grep -oE '(main|runtime|polyfills|vendor)[^"]*\.js'
-   curl -s URL/<bundle>.js | grep -oE '/(api|rest)/[A-Za-z0-9/_?=-]+' | sort -u
-   ```
-   This reveals endpoints like `/rest/...` you cannot guess. Also `URL/robots.txt`,
-   `URL/sitemap.xml`, and content brute-force: `ffuf -u URL/FUZZ -w
-   /usr/share/wordlists/dirb/common.txt` (fuzz `/api/FUZZ` and `/rest/FUZZ` too).
+2. **Find the REAL routes — run `web-recon URL` FIRST.** It fingerprints the app and
+   extracts the real `/api` and `/rest` routes from the JavaScript bundles (single-page apps
+   hide them there, not at guessable URLs) and saves them to `./report/recon_map.md`. Do NOT
+   skip it and do NOT guess routes by hand. If it returns no routes, then grep the bundles
+   yourself (`curl -s URL/ | grep -oE '[^" ]+\.js'`, then grep each for `/(api|rest)/...`).
+   Add content brute-force when useful: `ffuf -u URL/FUZZ -w
+   /usr/share/wordlists/dirb/common.txt`.
 3. Record each endpoint: method, parameters, auth needed, sample response. Map first.
 
 ## Methodology — test by class
 `curl` alone misses browser-driven bugs. Match the tool to the bug:
 
-- **SQL / NoSQL injection:** test the REAL search/login/parameter endpoints you mapped. Try
-  `'`, `' OR 1=1--`, boolean/time payloads; automate with sqlmap on the exact parameter. For
-  login bypass, inject in the auth request body.
-- **XSS:** reflected/stored may show in curl, but **DOM-based XSS runs in JavaScript and will
-  NOT appear in curl output** — open Firefox and test in the browser. "No XSS" from curl alone
-  is wrong.
-- **Broken access control / IDOR:** log in as a low-priv user, then reach another user's
-  object by id (basket, order, profile) and admin-only routes. A public catalog is by design.
+- **SQL / NoSQL injection:** test the REAL search/login/parameter endpoints from the recon
+  map (e.g. `/rest/products/search?q=`), not `/api/<Model>` list routes. You MUST run sqlmap
+  on every parameter before concluding "no SQLi" — a single manual quote is not enough:
+  `sqlmap -u "URL/rest/products/search?q=1" --batch --level 2 --risk 2`. For login bypass,
+  inject in the auth request body (e.g. email `' OR 1=1--`).
+- **XSS:** you MUST test in **Firefox**, not curl — DOM-based XSS runs in JavaScript and never
+  shows in curl output. For API/stored XSS (e.g. a persisted `<iframe>` payload), actually
+  POST the payload to the real endpoint, then load the page that renders it and confirm it
+  fires. "No XSS" concluded from curl alone is wrong.
+- **Broken access control / IDOR:** a 401/500 on an **unauthenticated** request does NOT mean
+  the endpoint is secure. You MUST register and log in first (POST to the login route), then
+  retest WITH the token: access another user's object by id (basket, order, profile) and
+  admin-only routes. Never write "properly protected" from unauthenticated requests alone. A
+  public product catalog is by design.
 - **Auth / JWT:** capture the token, decode it, check the algorithm (`none`/alg-confusion),
   weak secret, expiry, privilege claims.
 - **Misconfiguration / exposure:** error/stack traces, debug endpoints, default creds,

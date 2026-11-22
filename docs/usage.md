@@ -40,8 +40,11 @@ nano ~/engagement/acme-web/scope.md     # fill in authorization and in-scope tar
 cd ~/engagement/acme-web && watchdog-ai  # start the agent from inside the job folder
 ```
 
-Tell the agent what to do within scope, e.g. "test the targets in scope.md step by step and
-save findings under report/". It explains each command and asks before touching the network.
+Tell the agent what to do within scope, e.g. "read ./scope.md and run the full engagement".
+It works only on the targets in `scope.md`. For a web target it first runs `web-recon <url>`
+— a helper that fingerprints the app and pulls the real `/api` and `/rest` routes out of the
+JavaScript bundles (single-page apps hide them there), saving a map to `report/recon_map.md`
+so the agent does not have to guess endpoints. You can run `web-recon <url>` yourself too.
 
 ## Troubleshooting
 
