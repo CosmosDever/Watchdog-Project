@@ -63,7 +63,10 @@ found the real route yet. Enumerate first:
   map (e.g. `/rest/products/search?q=`), not `/api/<Model>` list routes. You MUST run sqlmap
   on every parameter before concluding "no SQLi" — a single manual quote is not enough:
   `sqlmap -u "URL/rest/products/search?q=1" --batch --level 2 --risk 2`. For login bypass,
-  inject in the auth request body (e.g. email `' OR 1=1--`).
+  inject in the auth request body (e.g. email `' OR 1=1--`). If sqlmap stalls or times out,
+  do not stop at "injectable": a `SQLITE_ERROR`/`SQL syntax` in the response already confirms
+  it — then extract by hand with a UNION query (`q=qwert'))UNION SELECT ... FROM Users--`) or
+  `sqlmap ... --technique=U --dump -T Users` to actually pull the data.
 - **XSS:** you MUST test in **Firefox**, not curl — DOM-based XSS runs in JavaScript and never
   shows in curl output. For API/stored XSS (e.g. a persisted `<iframe>` payload), actually
   POST the payload to the real endpoint, then load the page that renders it and confirm it
@@ -77,6 +80,10 @@ found the real route yet. Enumerate first:
   weak secret, expiry, privilege claims.
 - **Misconfiguration / exposure:** error/stack traces, debug endpoints, default creds,
   verbose headers, exposed files.
+- **Exposed hashes / credentials:** before cracking, IDENTIFY the hash type (`hashid '<hash>'`
+  or `hash-identifier`) and name it correctly in the report — do not call a 32-hex MD5
+  "plaintext" or "bcrypt". Crack with the matching hashcat mode (`-m 0` MD5, `-m 100` SHA1,
+  `-m 3200` bcrypt) against `/usr/share/wordlists/rockyou.txt`.
 
 ## Kali tool cheat-sheet (pick the right one)
 - **Recon/scan:** `nmap -sV -sC -p- TARGET` · `whatweb URL` · `curl -sI URL`
@@ -101,9 +108,14 @@ found the real route yet. Enumerate first:
   -y <pkg>`); offline, work with what is installed.
 
 ## Reporting
-Save Markdown under `./report/`: one file per phase or finding with title, severity
-(Critical/High/Medium/Low), the exact command, the real evidence (request/response),
-impact, and remediation. Finish with `./report/summary.md`.
+Save Markdown under `./report/`, **one file per distinct vulnerability**, with title, severity
+(Critical/High/Medium/Low), the exact command, the real evidence (request/response), impact,
+and remediation. Finish with `./report/summary.md`.
+
+**No duplicates.** Before writing a finding, `ls ./report/` and check whether that vulnerability
+already has a file. If it does, UPDATE that file — never create a second file (e.g. a third
+`*-sensitive-data-exposure.md`) for the same issue. Number files sequentially (`01-`, `02-`, …)
+with a unique slug, and keep one running count so the numbering does not repeat or jump.
 
 **Sanity check:** if you found almost nothing on a deliberately vulnerable target, your
 enumeration was incomplete — go back to "MAP before you test" and find the real routes.
