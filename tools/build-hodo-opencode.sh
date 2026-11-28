@@ -6,12 +6,11 @@
 # clone + `bun install`. This is the heavy, experimental part of the rebrand: the first build
 # may surface dependency errors to fix. Re-run after each OpenCode upstream release to re-brand.
 #
-# Usage:
-#   bash build-hodo-opencode.sh [/path/to/drive/launcher/guest]
-#   e.g. bash build-hodo-opencode.sh /media/kali/HODOPHYLAX/launcher/guest
+# Usage:  bash build-hodo-opencode.sh
+# It installs the branded binary into ~/.local/bin/opencode for this Kali, and leaves a
+# tarball in your home dir that you can copy to the drive from the host (steps printed at end).
 set -euo pipefail
 
-DEST="${1:-}"
 WORK="$HOME/hodo-opencode"
 
 # 1) bun toolchain
@@ -56,20 +55,23 @@ echo "[*] Building..."
 cd packages/cli
 bun run build
 
-# 5) find the produced binary and pack the tarball setup-ai.sh expects
+# 5) find the produced binary
 BIN="$(find dist -type f -name opencode | head -1 || true)"
 [ -n "$BIN" ] || { echo "[!] Build produced no 'opencode' binary under dist/. Inspect the build output above."; exit 1; }
 case "$(uname -m)" in x86_64) T=x64 ;; aarch64) T=arm64 ;; *) T="$(uname -m)" ;; esac
+
+# 6) install it for THIS Kali right now — hodo/opencode will use the branded binary immediately
+install -m 755 "$BIN" "$HOME/.local/bin/opencode"
+echo "[*] Installed the branded binary to ~/.local/bin/opencode."
+echo "    Start 'hodo' again to see the HODOPHYLAX splash."
+
+# 7) also pack a tarball so you can ship it on the drive for every machine
 OUT="$HOME/opencode-linux-$T.tar.gz"
 tar -C "$(dirname "$BIN")" -czf "$OUT" opencode
-echo "[*] Built: $OUT ($(du -h "$OUT" | cut -f1))"
-
-# 6) place on the drive if a guest dir was given
-if [ -n "$DEST" ] && [ -d "$DEST" ]; then
-    cp "$OUT" "$DEST/opencode-linux-$T.tar.gz"
-    echo "[*] Installed to $DEST/opencode-linux-$T.tar.gz"
-    echo "    Re-run setup-ai.sh in each Kali to pick up the branded binary."
-else
-    echo "[*] No drive guest dir given. Copy $OUT to <drive>/launcher/guest/ yourself."
-fi
+echo
+echo "[*] Tarball for the drive: $OUT ($(du -h "$OUT" | cut -f1))"
+echo "    The drive is NOT mounted inside Kali, so copy it out from the WINDOWS host:"
+echo "      1) in Kali:    sudo systemctl enable --now ssh"
+echo "      2) on Windows: scp -P 2222 kali@127.0.0.1:$OUT \"K:\\launcher\\guest\\opencode-linux-$T.tar.gz\""
+echo "    After that, setup-ai.sh on any machine installs the branded binary automatically."
 echo "[*] Done."
