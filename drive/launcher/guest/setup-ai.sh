@@ -23,6 +23,9 @@ echo "$SHA  $WORK/$FILE" | sha256sum -c --quiet
 tar -xzf "$WORK/$FILE" -C "$WORK"
 install -m 755 "$WORK/opencode" "$HOME/.local/bin/opencode"
 
+# "execute": "deny" turns OFF OpenCode's Code Mode (where the model writes JS that imports
+# node:fs etc.) so every tool is a plain direct call. Local models that emit classic tool calls
+# (Qwen) work; without this they loop on "Cannot import 'fs': this runtime doesn't provide it".
 cat > "$HOME/.config/opencode/opencode.json" <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
@@ -35,7 +38,7 @@ cat > "$HOME/.config/opencode/opencode.json" <<EOF
       "models": { "local": { "name": "Local model" } }
     }
   },
-  "permission": { "bash": "allow", "edit": "allow", "webfetch": "allow" }
+  "permission": { "execute": "deny", "bash": "allow", "edit": "allow", "webfetch": "allow" }
 }
 EOF
 
