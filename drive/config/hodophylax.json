@@ -1,5 +1,5 @@
 {
-  "drive": { "label": "WATCHDOG", "size_gb": 400 },
+  "drive": { "label": "HODOPHYLAX", "size_gb": 400 },
 
   "os": {
     "name": "kali",
@@ -25,6 +25,6 @@
     }
   ],
 
-  "harness": { "name": "watchdog-ai", "endpoint": "http://10.0.2.2:8080/v1" },
+  "harness": { "name": "hodo", "endpoint": "http://10.0.2.2:8080/v1" },
   "runtime": { "llm_port": 8080, "context_size": 16384, "flash_attention": true }
 }

@@ -8,7 +8,7 @@ set -uo pipefail
 
 [ $# -ge 1 ] || { echo "Usage: web-recon <url>   e.g. web-recon http://127.0.0.1:42000"; exit 1; }
 URL="${1%/}"
-UA="watchdog-web-recon"
+UA="hodophylax-web-recon"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 

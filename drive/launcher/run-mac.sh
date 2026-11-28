@@ -5,7 +5,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="${1:-gui}"
 source "$DIR/preflight-mac.sh"
 
-echo '==================== Watchdog ===================='
+echo '==================== Hodophylax ===================='
 
 # If the drive has no VM / model yet, offer to download and install them.
 HAS_VM="$(find "$DIR/../vm" -name '*.qcow2' -print -quit 2>/dev/null || true)"
@@ -36,7 +36,7 @@ read -r choice
 case "$choice" in
     2)
         echo 'Cloud API: after Kali opens, set your key and run the agent, e.g.'
-        echo '  export ANTHROPIC_API_KEY=...   then   watchdog-ai   (use /models to pick)'
+        echo '  export ANTHROPIC_API_KEY=...   then   hodo   (use /models to pick)'
         echo 'The local model server will not be started.'
         ;;
     3)

@@ -8,7 +8,7 @@ LABEL=WATCHDOG-DATA
 LINK="$HOME/engagement"
 
 if [ ! -e "$DEV" ]; then
-    echo "Shared data disk not found. Shut down Kali and start it again with watchdog-run."
+    echo "Shared data disk not found. Shut down Kali and start it again with hodo-run."
     exit 1
 fi
 

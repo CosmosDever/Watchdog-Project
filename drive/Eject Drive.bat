@@ -1,5 +1,5 @@
 @echo off
-rem Safely eject the Watchdog drive this file lives on. Double-click to run.
+rem Safely eject the Hodophylax drive this file lives on. Double-click to run.
 rem Flush + force-dismount works even though this .bat lives on the drive being ejected.
 set "DRV=%~d0"
 set "EJPS=%~dp0launcher\eject-drive.ps1"

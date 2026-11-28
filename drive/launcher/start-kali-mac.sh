@@ -68,7 +68,7 @@ CPUS=$(( LOGICAL / 2 ))
 [ "$CPUS" -lt 2 ] && CPUS=2
 
 COMMON=(
-    -name "Watchdog - $NAME"
+    -name "Hodophylax - $NAME"
     -accel hvf
     -cpu host
     -smp "$CPUS"

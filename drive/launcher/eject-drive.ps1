@@ -1,5 +1,5 @@
 param([string]$Drive)
-# Flush and safely dismount the Watchdog drive. Works for USB SSDs that Windows treats as
+# Flush and safely dismount the Hodophylax drive. Works for USB SSDs that Windows treats as
 # a fixed disk (where the Shell "Eject" verb does nothing). Called by "Eject Drive.bat".
 $ErrorActionPreference = 'SilentlyContinue'
 

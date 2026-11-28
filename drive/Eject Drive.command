@@ -1,5 +1,5 @@
 #!/bin/bash
-# Safely eject the Watchdog drive this file lives on. Double-click to run (or: bash "Eject Drive.command").
+# Safely eject the Hodophylax drive this file lives on. Double-click to run (or: bash "Eject Drive.command").
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HOME"
 echo

@@ -1,13 +1,13 @@
-# Watchdog in-place provisioner (Windows). Lives on the drive at setup\.
+# Hodophylax in-place provisioner (Windows). Lives on the drive at setup\.
 # Downloads and hash-verifies QEMU, llama.cpp, Python, the agent engine, the OS image,
-# and the models INTO this drive, reading config\watchdog.json. Needs Python for the
-# QEMU step. watchdog-run offers to run this when the drive is not set up yet.
+# and the models INTO this drive, reading config\hodophylax.json. Needs Python for the
+# QEMU step. hodo-run offers to run this when the drive is not set up yet.
 param([switch]$Yes)
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot   # the drive root (parent of setup\)
-$config = Join-Path $root 'config\watchdog.json'
-if (-not (Test-Path -LiteralPath $config)) { $config = Join-Path $root 'config\watchdog.example.json' }
+$config = Join-Path $root 'config\hodophylax.json'
+if (-not (Test-Path -LiteralPath $config)) { $config = Join-Path $root 'config\hodophylax.example.json' }
 if (-not (Test-Path -LiteralPath $config)) { throw "No manifest found in $root\config\." }
 $manifest = Get-Content -Raw -LiteralPath $config | ConvertFrom-Json
 
@@ -74,4 +74,4 @@ else { Copy-Item $imgArchive "$osDir\" -Force; Write-Host '  iso-installer: run 
 Write-Host 'Models...' -ForegroundColor Cyan
 foreach ($m in $manifest.models) { Get-Verified $m.url "$root\llm\models\$($m.name)" $m.sha256 }
 
-Write-Host "`nDone. This drive is ready. Run watchdog-run from its root." -ForegroundColor Green
+Write-Host "`nDone. This drive is ready. Run hodo-run from its root." -ForegroundColor Green

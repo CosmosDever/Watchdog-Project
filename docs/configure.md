@@ -1,6 +1,6 @@
-# Configuring Watchdog
+# Configuring Hodophylax
 
-Everything is driven by `config/watchdog.json` on the drive. Edit it and re-run the
+Everything is driven by `config/hodophylax.json` on the drive. Edit it and re-run the
 provisioner (`setup/provision.ps1` or `setup/provision-mac.sh`) to apply changes that
 involve downloads.
 
@@ -53,7 +53,7 @@ Claude:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...        # set it in the Kali terminal, do not save it to a file on the drive
-watchdog-ai                                # then: /models  → pick an Anthropic model
+hodo                                # then: /models  → pick an Anthropic model
 ```
 
 OpenAI or OpenRouter work the same way with `OPENAI_API_KEY` or `OPENROUTER_API_KEY`.
@@ -75,13 +75,13 @@ are OS-agnostic; only the guest-side helper (`setup-ai.sh`) assumes `apt`.
 
 `harness.name` defaults to `opencode`, the tested one. Any OpenAI-compatible terminal agent
 (for example Aider) can point at the same `http://10.0.2.2:8080/v1` endpoint. Install it in
-the guest and set its base URL; the rest of Watchdog does not change.
+the guest and set its base URL; the rest of Hodophylax does not change.
 
 ### HackingBuddyGPT as an alternative harness (advanced, needs internet once to install)
 
 [HackingBuddyGPT](https://github.com/ipa-lab/hackingBuddyGPT) is a research pentest-agent
 framework with purpose-built use-cases (`WebAPITesting`, `WebTestingWithShell`,
-`PrivEscLinux`). It runs **inside Kali** and can point its LLM at either Watchdog's local model
+`PrivEscLinux`). It runs **inside Kali** and can point its LLM at either Hodophylax's local model
 or a cloud API. Install (Python 3.13+, requires network for the one-time `pip`):
 
 ```bash
@@ -89,7 +89,7 @@ git clone https://github.com/ipa-lab/hackingBuddyGPT && cd hackingBuddyGPT
 python -m venv venv && source venv/bin/activate && pip install -e .
 ```
 
-Point it at the **local** Watchdog model (OpenAI-compatible via the toolshim):
+Point it at the **local** Hodophylax model (OpenAI-compatible via the toolshim):
 
 ```bash
 wintermute WebAPITesting \

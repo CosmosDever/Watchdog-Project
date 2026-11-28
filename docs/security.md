@@ -1,6 +1,6 @@
 # Responsible use
 
-Watchdog packages real offensive-security tools and an AI that can run them. Use it only
+Hodophylax packages real offensive-security tools and an AI that can run them. Use it only
 where you are authorized.
 
 ## Rules of engagement
@@ -25,7 +25,7 @@ where you are authorized.
 
 ## Models
 
-Watchdog ships no model weights. Use open-weight models from reputable publishers and
+Hodophylax ships no model weights. Use open-weight models from reputable publishers and
 verify their hashes. The authorization context in `AGENTS.md` keeps a normal model willing
 to help with *authorized* lab work without removing its safety behavior. Choosing a model
 is the operator's responsibility.

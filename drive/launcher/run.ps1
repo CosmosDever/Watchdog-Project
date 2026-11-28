@@ -3,7 +3,7 @@ param([ValidateSet('gui', 'ssh')] [string]$Mode = 'gui')
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'preflight.ps1')
 
-Write-Host '==================== Watchdog ====================' -ForegroundColor Cyan
+Write-Host '==================== Hodophylax ====================' -ForegroundColor Cyan
 
 # If the drive has no runtime / VM / model yet, offer to download and install them.
 $driveRoot = Split-Path -Parent $PSScriptRoot
@@ -37,7 +37,7 @@ $choice = Read-Host 'Choose [1/2/3]'
 switch ($choice) {
     '2' {
         Write-Host 'Cloud API: after Kali opens, set your key and run the agent, e.g.' -ForegroundColor Green
-        Write-Host '  export ANTHROPIC_API_KEY=...   then   watchdog-ai   (use /models to pick)' -ForegroundColor Green
+        Write-Host '  export ANTHROPIC_API_KEY=...   then   hodo   (use /models to pick)' -ForegroundColor Green
         Write-Host 'The local model server will not be started.'
     }
     '3' { Write-Host 'No AI backend started.' }

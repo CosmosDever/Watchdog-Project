@@ -39,4 +39,4 @@ EOF
 
 echo "Created $dir"
 echo "Edit scope:  nano \"$dir/scope.md\""
-echo "Start work:  cd \"$dir\" && watchdog-ai"
+echo "Start work:  cd \"$dir\" && hodo"

@@ -1,0 +1,15 @@
+#!/bin/bash
+# hodo — the Hodophylax security agent.
+# Engine: OpenCode (MIT, https://opencode.ai). Hodophylax brands and configures it.
+cat <<'BANNER'
+
+  ════════════════════════════════════════════════
+     H O D O P H Y L A X   ·  φύλαξ
+     the guardian that travels with you
+     authorized security testing agent
+  ════════════════════════════════════════════════
+
+BANNER
+# Pause so the banner is visible before OpenCode's full-screen UI takes over.
+read -rp "  press Enter to launch... " _
+exec opencode "$@"

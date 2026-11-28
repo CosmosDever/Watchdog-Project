@@ -1,4 +1,4 @@
-# Watchdog never commits large downloaded artifacts — the provisioner fetches them.
+# Hodophylax never commits large downloaded artifacts — the provisioner fetches them.
 # Models (multi-GB GGUF)
 *.gguf
 # VM disk images and firmware

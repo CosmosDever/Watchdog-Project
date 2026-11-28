@@ -53,7 +53,7 @@ if (Get-NetTCPConnection -State Listen -LocalPort $SshPort -ErrorAction Silently
 }
 
 $qemuArgs = @(
-    '-name', "Watchdog - $($selected.Name)",
+    '-name', "Hodophylax - $($selected.Name)",
     '-machine', 'q35',
     '-accel', 'whpx,kernel-irqchip=off',
     '-accel', 'tcg,thread=multi',
@@ -95,7 +95,7 @@ Write-Host "SSH:    ssh <user>@127.0.0.1 -p $SshPort"
 Write-Host 'Shut down the VM before unplugging the drive.' -ForegroundColor Yellow
 
 # A warm reboot can hang under WHPX, so each guest reboot becomes a full stop and start.
-$traceLog = Join-Path $env:TEMP 'watchdog-qemu.trace'
+$traceLog = Join-Path $env:TEMP 'hodophylax-qemu.trace'
 $qemuArgs += @('-no-reboot', '-D', $traceLog, '-trace', 'enable=qemu_system_shutdown_request')
 
 # With -no-reboot, a reset exits cleanly without a shutdown request. Power-off and quit log one.
@@ -148,8 +148,8 @@ $qemuArgs += @(
     '-monitor', "tcp:127.0.0.1:$monitorPort,server,nowait"
 )
 $quoted = ($qemuArgs | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
-$stdout = Join-Path $env:TEMP 'watchdog-qemu.out'
-$stderr = Join-Path $env:TEMP 'watchdog-qemu.err'
+$stdout = Join-Path $env:TEMP 'hodophylax-qemu.out'
+$stderr = Join-Path $env:TEMP 'hodophylax-qemu.err'
 do {
     Remove-Item -LiteralPath $traceLog -ErrorAction SilentlyContinue
     $vm = Start-Process -FilePath $qemu -ArgumentList $quoted -PassThru -WindowStyle Hidden `
@@ -167,7 +167,7 @@ do {
 
     while (-not $vm.HasExited) {
         $window = Start-Process -FilePath $viewer -PassThru -ArgumentList @(
-            '--title', "`"Watchdog - $($selected.Name)`"", '--auto-resize=always', "spice://127.0.0.1:$spicePort")
+            '--title', "`"Hodophylax - $($selected.Name)`"", '--auto-resize=always', "spice://127.0.0.1:$spicePort")
         while (-not $window.HasExited -and -not $vm.HasExited) { Start-Sleep -Milliseconds 500 }
         if ($vm.HasExited) {
             if (-not $window.HasExited) { Stop-Process -Id $window.Id -Force }

@@ -1,14 +1,14 @@
 #!/bin/bash
-# Watchdog in-place provisioner (macOS / Linux). Lives on the drive at setup/.
+# Hodophylax in-place provisioner (macOS / Linux). Lives on the drive at setup/.
 # Downloads and hash-verifies the macOS llama.cpp runtimes, the agent engine, the OS image,
-# and the models INTO this drive, reading config/watchdog.json. QEMU comes from Homebrew
+# and the models INTO this drive, reading config/hodophylax.json. QEMU comes from Homebrew
 # (brew install qemu) — the launcher offers it. Usage: bash setup/provision-mac.sh [-y]
 set -euo pipefail
 
 YES="${1:-}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG="$ROOT/config/watchdog.json"
-[ -f "$CONFIG" ] || CONFIG="$ROOT/config/watchdog.example.json"
+CONFIG="$ROOT/config/hodophylax.json"
+[ -f "$CONFIG" ] || CONFIG="$ROOT/config/hodophylax.example.json"
 [ -f "$CONFIG" ] || { echo "No manifest in $ROOT/config/."; exit 1; }
 
 LLAMA_BUILD="b12625"
@@ -58,4 +58,4 @@ for i in $(seq 0 $((N - 1))); do
     verify "$MU" "$ROOT/llm/models/$MN" "$MS"
 done
 
-echo "Done. Run 'brew install qemu' once, then run watchdog-run from the drive."
+echo "Done. Run 'brew install qemu' once, then run hodo-run from the drive."

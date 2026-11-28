@@ -1,0 +1,47 @@
+#!/bin/bash
+# target <ip-or-url> <engagement-name> — scaffold an engagement and start the agent in it.
+# Creates <engagement>/report + a scope.md with the target filled in, then launches `hodo`
+# from inside the folder (which reads scope.md and AGENTS.md). Authorized testing only.
+set -euo pipefail
+
+if [ $# -lt 2 ] || [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: target <ip-or-url> <engagement-name>"
+    echo "   e.g. target 10.10.10.5 acme-box"
+    echo "        target http://127.0.0.1:42000 juice-shop"
+    exit 1
+fi
+
+TGT="$1"
+NAME="$2"
+BASE="${ENGAGEMENT_DIR:-$HOME/engagement}"
+DIR="$BASE/$NAME"
+
+mkdir -p "$DIR/report"
+if [ ! -f "$DIR/scope.md" ]; then
+    cat > "$DIR/scope.md" <<EOF
+# Engagement scope — $NAME
+
+## Authorization
+Authorized testing of my own lab / targets I have written permission for.
+
+## In scope
+- $TGT
+
+## Out of scope
+- Everything not listed above. No denial of service.
+
+## Rules of engagement
+- Read-only recon on in-scope targets proceeds without asking each time.
+- Ask once before state-changing actions (POST/PUT/DELETE, account changes, uploads),
+  credential brute-forcing, or anything that could disrupt the service.
+
+## Objectives
+- Map the target first, then test it end to end. Evidence-based findings under ./report/.
+EOF
+    echo "Created $DIR  (target: $TGT)"
+else
+    echo "Using existing $DIR  (scope.md kept; add $TGT there if missing)"
+fi
+
+cd "$DIR"
+exec hodo

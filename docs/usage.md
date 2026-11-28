@@ -4,10 +4,10 @@
 
 Plug in the drive and from its root run:
 
-- Windows: `.\watchdog-run.bat` (in PowerShell) or double-click it.
-- macOS: `bash /Volumes/WATCHDOG/watchdog-run.command` from any folder, or right-click the file → Open.
+- Windows: `.\hodo-run.bat` (in PowerShell) or double-click it.
+- macOS: `bash /Volumes/HODOPHYLAX/hodo-run.command` from any folder, or right-click the file → Open.
 
-`watchdog-run` checks the machine, asks whether to also start the local AI, then opens Kali.
+`hodo-run` checks the machine, asks whether to also start the local AI, then opens Kali.
 You can also start pieces alone with the `Start ...` launchers.
 
 ## First time inside Kali (run once)
@@ -22,7 +22,7 @@ Log in as `kali` / `kali`, open a terminal, and run:
 ```bash
 passwd                                                                                      # change the default password
 curl -fsS -o /tmp/d.sh tftp://10.0.2.2/setup-desktop.sh && bash /tmp/d.sh && sudo reboot     # two-way clipboard + screen resize
-curl -fsS -o /tmp/s.sh tftp://10.0.2.2/setup-ai.sh && bash /tmp/s.sh                          # install the Watchdog agent + auto-update hook
+curl -fsS -o /tmp/s.sh tftp://10.0.2.2/setup-ai.sh && bash /tmp/s.sh                          # install the Hodophylax agent + auto-update hook
 ```
 
 The `10.0.2.2` files are served from the drive by QEMU whenever the VM runs, so these always
@@ -36,7 +36,7 @@ work. Start the AI launcher on the host first if you want the local model reacha
 
 Mac uses the `kali-arm64` installer. After choosing **Install** the main window stays black.
 In the QEMU menu bar choose **View > serial0** to see the installer. If it returns to the
-installer menu after finishing, close the QEMU window and run `watchdog-run` again. The
+installer menu after finishing, close the QEMU window and run `hodo-run` again. The
 launcher then boots the installed disk without the ISO.
 
 ### Clipboard on Mac
@@ -50,7 +50,7 @@ in Kali and Command+V on the Mac.
 Windows runs Kali `amd64` and Apple Silicon runs Kali `arm64`, so each keeps its own OS disk.
 Work files live on one shared disk, `shared/data.qcow2`, mounted at `/data`. The launcher
 attaches it automatically. Run this **once inside each Kali VM** after starting it with
-`watchdog-run`:
+`hodo-run`:
 
 ```bash
 curl -fsS -o /tmp/data.sh tftp://10.0.2.2/setup-data.sh && bash /tmp/data.sh
@@ -67,7 +67,7 @@ overwriting, and the old folder is kept as `~/engagement.local-backup-<time>`.
 ```bash
 new-engagement acme-web                 # makes ~/engagement/acme-web/ with scope.md + report/
 nano ~/engagement/acme-web/scope.md     # fill in authorization and in-scope targets
-cd ~/engagement/acme-web && watchdog-ai  # start the agent from inside the job folder
+cd ~/engagement/acme-web && hodo  # start the agent from inside the job folder
 ```
 
 Tell the agent what to do within scope, e.g. "read ./scope.md and run the full engagement".

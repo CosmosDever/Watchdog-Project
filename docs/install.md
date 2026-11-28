@@ -1,29 +1,29 @@
-# Building a Watchdog drive
+# Building a Hodophylax drive
 
 You need a USB SSD (≈400 GB+) and 30–60 minutes for the first download.
 
 ## 1. Prepare an exFAT drive
 
-Format the drive (or a partition) as **exFAT** with the label `WATCHDOG`. exFAT is
+Format the drive (or a partition) as **exFAT** with the label `HODOPHYLAX`. exFAT is
 read/write on both Windows and macOS.
 
-- Windows: Disk Management, or `Format-Volume -DriveLetter X -FileSystem exFAT -NewFileSystemLabel WATCHDOG`.
-- macOS: Disk Utility → Erase → Format: ExFAT, Name: WATCHDOG.
+- Windows: Disk Management, or `Format-Volume -DriveLetter X -FileSystem exFAT -NewFileSystemLabel HODOPHYLAX`.
+- macOS: Disk Utility → Erase → Format: ExFAT, Name: HODOPHYLAX.
 
-> Formatting erases the target. Double-check the drive. Watchdog never formats for you.
+> Formatting erases the target. Double-check the drive. Hodophylax never formats for you.
 
 ## 2. Copy the files
 
 Copy the contents of this repo's **`drive/`** folder to the **root** of the drive. The root
-should then contain `watchdog-run.bat`, `watchdog-run.command`, and the `launcher/`,
+should then contain `hodo-run.bat`, `hodo-run.command`, and the `launcher/`,
 `setup/`, `config/`, and `llm/` folders.
 
-To change the guest OS or the models, edit `config/watchdog.json` on the drive now (defaults
+To change the guest OS or the models, edit `config/hodophylax.json` on the drive now (defaults
 to Kali amd64 + Qwen3.5-9B and WhiteRabbitNeo). See [configure.md](configure.md).
 
 ## 3. Download the heavy parts
 
-Plug the drive into a machine and run **`watchdog-run`** from its root. The first time, it
+Plug the drive into a machine and run **`hodo-run`** from its root. The first time, it
 sees the drive is empty and **offers to download and verify Kali, the runtimes, and the
 models** — say yes. Or run the provisioner directly:
 
@@ -41,7 +41,7 @@ Every download is checked against a known SHA-256; a mismatch aborts.
 
 ## 4. Use it
 
-Run `watchdog-run` again and follow [usage.md](usage.md), including the one-time in-guest
+Run `hodo-run` again and follow [usage.md](usage.md), including the one-time in-guest
 setup on Kali's first boot.
 
 ## Status

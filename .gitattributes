@@ -8,8 +8,11 @@
 # Unix shell scripts and extension-less helpers must stay LF
 *.sh         text eol=lf
 *.command    text eol=lf
-watchdog-ai  text eol=lf
+hodo           text eol=lf
+target         text eol=lf
 new-engagement text eol=lf
+web-recon      text eol=lf
+juice-score    text eol=lf
 
 # Never treat these as text
 *.gguf binary
