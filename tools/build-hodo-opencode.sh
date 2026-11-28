@@ -58,13 +58,11 @@ bun run build
 # 5) find the produced binary that matches THIS machine (the build emits every platform,
 #    so picking the first one can give a Mac/arm64 binary -> "Exec format error").
 case "$(uname -m)" in x86_64) T=x64 ;; aarch64) T=arm64 ;; *) T="$(uname -m)" ;; esac
-BIN="$(find dist -type f -name opencode -path "*linux-$T*" | head -1 || true)"
-if [ -z "$BIN" ]; then
-    # fall back to any binary that `file` reports as a native ELF
-    while IFS= read -r f; do
-        if file "$f" | grep -q 'ELF 64-bit'; then BIN="$f"; break; fi
-    done < <(find dist -type f -name opencode)
-fi
+# Kali is glibc (not musl) and a QEMU vCPU often lacks AVX2, so prefer a glibc "baseline" build.
+pick() { find dist -type f -name opencode -path "*linux-$T*" "$@" 2>/dev/null | head -1; }
+BIN="$(pick ! -path '*musl*' -path '*baseline*')"       # glibc + baseline (best for QEMU Kali)
+[ -n "$BIN" ] || BIN="$(pick ! -path '*musl*')"          # any glibc
+[ -n "$BIN" ] || BIN="$(pick)"                           # last resort (may be musl)
 if [ -z "$BIN" ]; then
     echo "[!] No native linux opencode binary found under dist/. These were built:"
     find dist -type f -name opencode -exec sh -c 'echo "  $1 -> $(file -b "$1")"' _ {} \;
