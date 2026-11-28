@@ -55,10 +55,22 @@ echo "[*] Building..."
 cd packages/cli
 bun run build
 
-# 5) find the produced binary
-BIN="$(find dist -type f -name opencode | head -1 || true)"
-[ -n "$BIN" ] || { echo "[!] Build produced no 'opencode' binary under dist/. Inspect the build output above."; exit 1; }
+# 5) find the produced binary that matches THIS machine (the build emits every platform,
+#    so picking the first one can give a Mac/arm64 binary -> "Exec format error").
 case "$(uname -m)" in x86_64) T=x64 ;; aarch64) T=arm64 ;; *) T="$(uname -m)" ;; esac
+BIN="$(find dist -type f -name opencode -path "*linux-$T*" | head -1 || true)"
+if [ -z "$BIN" ]; then
+    # fall back to any binary that `file` reports as a native ELF
+    while IFS= read -r f; do
+        if file "$f" | grep -q 'ELF 64-bit'; then BIN="$f"; break; fi
+    done < <(find dist -type f -name opencode)
+fi
+if [ -z "$BIN" ]; then
+    echo "[!] No native linux opencode binary found under dist/. These were built:"
+    find dist -type f -name opencode -exec sh -c 'echo "  $1 -> $(file -b "$1")"' _ {} \;
+    exit 1
+fi
+echo "[*] Using binary: $BIN ($(file -b "$BIN" | cut -d, -f1,2))"
 
 # 6) install it for THIS Kali right now — hodo/opencode will use the branded binary immediately
 install -m 755 "$BIN" "$HOME/.local/bin/opencode"
