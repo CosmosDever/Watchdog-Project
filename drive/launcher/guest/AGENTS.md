@@ -59,8 +59,25 @@ memory of what is done and what is left.
 - After recon, write the tree: each in-scope target → the vulnerability classes to test →
   concrete leaf tasks. Tag every leaf `[ ]` todo, `[~]` doing, `[x]` done (you actually
   performed it), `[!]` FINDING, or `[blocked: reason]` if something genuinely stops you.
+  **Every leaf you create at this point is `[ ]`.** Do NOT pre-mark anything `[x]` or `[!]`,
+  and do NOT yet write a `-> report/NN-*.md` path next to it: you earn the tag and the filename
+  by doing the work, you do not plan them in.
+- **File first, then tag — never the other way round.** The moment a leaf turns `[x]` or `[!]`
+  is the LAST step of working it, done in this exact order: (1) run the command and read its
+  real output, (2) if it is a finding, write `report/NN-*.md` with that output pasted in, (3)
+  only now flip the leaf to `[x]`/`[!]` and append the `-> report/NN-*.md` path. A leaf must
+  never name a report file that does not exist on disk. If you catch yourself writing `[x] ...
+  -> report/03-idor.md` and `report/03-idor.md` is not written yet, STOP — you have the order
+  backwards; go create the file from real output first, or set the leaf `[blocked]`.
 - **Re-read `ptt.md` at the start of every step.** Work the next `[ ]` leaf, then update its
   tag immediately. Add new leaves when recon or a result reveals new routes.
+- **The report/ directory is the source of truth, not the tree — never loop over a mismatch.**
+  If a leaf says `[x]`/`[!]` but its `report/NN-*.md` file does not exist, the leaf is wrong,
+  not the disk: silently reset that leaf to `[ ]` and actually perform it now (run the command,
+  then write the file). Do not sit there re-deciding "mark it blocked vs create the finding"
+  turn after turn — pick the action (run it, or `[blocked]` with a one-line reason) in ONE step
+  and move to the next leaf. Repeating the same reconciliation thought is the failure; acting
+  is the fix.
 - **Skipping is NOT done.** Never mark a leaf `[x]` because it was hard, needed a browser, or
   needed a login — that is `[blocked: ...]` and counts as still open. "Requires auth" is never
   a valid skip: getting a session IS a task (see "Authenticate early") and it unlocks most of
