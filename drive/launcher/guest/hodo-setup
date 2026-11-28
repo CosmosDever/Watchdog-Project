@@ -1,0 +1,38 @@
+#!/bin/bash
+# hodo-setup — one-time Kali setup for Hodophylax. Run ONCE per Kali VM, after starting it
+# with hodo-run. It installs the agent (hodo + target), mounts the shared /data disk, sets up
+# two-way clipboard + screen resize, then reboots. Each step is fetched from the drive over
+# TFTP (the host launcher serves them), so this always works while the VM is running.
+set -uo pipefail
+HOST_IP="10.0.2.2"
+
+fetch_run() {
+    local f="$1"
+    echo
+    echo ">>> $f"
+    if curl -fsS --connect-timeout 10 -o "/tmp/$f" "tftp://$HOST_IP/$f"; then
+        bash "/tmp/$f"
+        return $?
+    fi
+    echo "!! Could not fetch $f from the drive."
+    echo "   Start Kali with hodo-run (that is what serves these files over TFTP)."
+    return 1
+}
+
+echo "======================================================"
+echo "  Hodophylax — one-time Kali setup"
+echo "======================================================"
+echo "Installs the agent, mounts /data, sets up clipboard,"
+echo "then REBOOTS Kali. Run once per VM."
+
+fetch_run setup-ai.sh   || echo "!! agent step had a problem (continuing)"
+fetch_run setup-data.sh || echo "!! shared-data step had a problem (continuing)"
+
+echo
+echo "Agent + shared /data are set up."
+echo "The last step (clipboard + screen resize) needs a REBOOT to finish."
+read -rp "Press Enter to run it and reboot now (Ctrl+C to do it later)... " _
+if fetch_run setup-desktop.sh; then
+    echo "Rebooting to finish clipboard setup..."
+    sudo reboot
+fi

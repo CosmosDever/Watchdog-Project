@@ -39,10 +39,27 @@ bash setup/provision-mac.sh
 
 Every download is checked against a known SHA-256; a mismatch aborts.
 
-## 4. Use it
+## 4. First boot and daily use
 
-Run `hodo-run` again and follow [usage.md](usage.md), including the one-time in-guest
-setup on Kali's first boot.
+Three parts — host, guest once, then work:
+
+1. **Host:** run `hodo-run` from the drive root → it checks the machine, offers the local AI,
+   and boots Kali.
+2. **Guest (first boot, once per Kali VM):** log in as `kali` / `kali`, open a terminal, and
+   run the single setup command:
+
+   ```bash
+   curl -fsS -o /tmp/setup.sh tftp://10.0.2.2/hodo-setup && bash /tmp/setup.sh
+   ```
+
+   It installs the agent (`hodo`, `target`), mounts the shared `/data` disk, sets up clipboard,
+   and reboots. Run it once on the Windows (amd64) Kali and once on the Mac (arm64) Kali. Also
+   run `passwd` to change the default password.
+3. **Work:** `target <ip-or-url> <name>` scaffolds an engagement folder and opens the agent in
+   it. Shut down safely with the **`Eject Drive`** launcher before unplugging.
+
+See [usage.md](usage.md) for the Apple Silicon first-install note, the shared `/data` disk, and
+troubleshooting.
 
 ## Status
 

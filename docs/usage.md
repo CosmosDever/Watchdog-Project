@@ -12,25 +12,30 @@ You can also start pieces alone with the `Start ...` launchers.
 
 ## First time inside Kali (run once)
 
-The guest install runs **inside Kali one time** — the host cannot write into the running
-VM's own disk, so the setup has to execute in the guest. After this one time it is
-automatic: a login hook refreshes the agent, its commands, and the rules from the drive on
-every terminal, so you never run setup again, even after the project updates.
+The guest setup runs **inside Kali one time** — the host cannot write into the running VM's
+own disk. After this once it is automatic: a login hook refreshes the agent, its commands, and
+the rules from the drive on every terminal, so you never run setup again, even after updates.
 
-Log in as `kali` / `kali`, open a terminal, and run:
+Start Kali with `hodo-run`, log in as `kali` / `kali`, open a terminal, and run **one command**:
 
 ```bash
-passwd                                                                                      # change the default password
-curl -fsS -o /tmp/d.sh tftp://10.0.2.2/setup-desktop.sh && bash /tmp/d.sh && sudo reboot     # two-way clipboard + screen resize
-curl -fsS -o /tmp/s.sh tftp://10.0.2.2/setup-ai.sh && bash /tmp/s.sh                          # install the Hodophylax agent + auto-update hook
+curl -fsS -o /tmp/setup.sh tftp://10.0.2.2/hodo-setup && bash /tmp/setup.sh
 ```
+
+That installs the agent (`hodo`, `target`), mounts the shared `/data` disk, sets up two-way
+clipboard + screen resize, and reboots. Also change the default password with `passwd`.
+
+<details><summary>Prefer to run the three steps by hand?</summary>
+
+```bash
+curl -fsS -o /tmp/s.sh    tftp://10.0.2.2/setup-ai.sh      && bash /tmp/s.sh            # agent
+curl -fsS -o /tmp/data.sh tftp://10.0.2.2/setup-data.sh    && bash /tmp/data.sh         # shared /data
+curl -fsS -o /tmp/d.sh    tftp://10.0.2.2/setup-desktop.sh && bash /tmp/d.sh && sudo reboot  # clipboard
+```
+</details>
 
 The `10.0.2.2` files are served from the drive by QEMU whenever the VM runs, so these always
 work. Start the AI launcher on the host first if you want the local model reachable.
-
-> Want zero typing even on the first boot? The provisioner can inject this with
-> `virt-customize --firstboot` at build time (needs libguestfs on the build machine). It is
-> not enabled by default — this one-time in-guest run is the simplest, most portable path.
 
 ### Apple Silicon first install
 
@@ -49,26 +54,34 @@ in Kali and Command+V on the Mac.
 
 Windows runs Kali `amd64` and Apple Silicon runs Kali `arm64`, so each keeps its own OS disk.
 Work files live on one shared disk, `shared/data.qcow2`, mounted at `/data`. The launcher
-attaches it automatically. Run this **once inside each Kali VM** after starting it with
-`hodo-run`:
-
-```bash
-curl -fsS -o /tmp/data.sh tftp://10.0.2.2/setup-data.sh && bash /tmp/data.sh
-```
-
-`~/engagement` then points to `/data/engagement`. Existing engagement files are copied without
-overwriting, and the old folder is kept as `~/engagement.local-backup-<time>`.
+attaches it automatically, and the one-time `hodo-setup` above already mounts it and points
+`~/engagement` at `/data/engagement` (existing files are copied, the old folder kept as
+`~/engagement.local-backup-<time>`). So anything you create under `~/engagement` on one machine
+shows up on the other. **Run `hodo-setup` once in each Kali VM** (Windows and Mac) to share it.
 
 - Keep architecture-specific programs out of `/data`; install tools separately in each VM.
 - Only one VM can use the shared disk at a time. Shut Kali down before moving the drive.
 
 ## Run an engagement
 
+One command scaffolds the folder and opens the agent in it:
+
+```bash
+target 10.10.10.5 acme-box                 # or:  target http://127.0.0.1:42000 juice-shop
+```
+
+`target <ip-or-url> <name>` creates `~/engagement/<name>/` with a `report/` folder and a
+`scope.md` that already lists the target as in-scope, then launches the agent there. Edit
+`scope.md` if you need to add targets or rules.
+
+<details><summary>Or step by step</summary>
+
 ```bash
 new-engagement acme-web                 # makes ~/engagement/acme-web/ with scope.md + report/
 nano ~/engagement/acme-web/scope.md     # fill in authorization and in-scope targets
-cd ~/engagement/acme-web && hodo  # start the agent from inside the job folder
+cd ~/engagement/acme-web && hodo        # start the agent from inside the job folder
 ```
+</details>
 
 Tell the agent what to do within scope, e.g. "read ./scope.md and run the full engagement".
 It works only on the targets in `scope.md`. For a web target it first runs `web-recon <url>`

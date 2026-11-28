@@ -43,9 +43,13 @@ the tools, and a config file to swap the OS, the models, and the harness.
    **offers to download Kali + the default model (~6 GB) — say yes.** (Or run the provisioner
    directly: `setup\provision.ps1` on Windows, `bash setup/provision-mac.sh` on macOS. Edit
    `config/hodophylax.json` first to change the OS or models.)
-3. The first time Kali boots, run the one-time in-guest setup (see
-   [docs/usage.md](docs/usage.md#first-time-inside-kali-run-once)). After that the agent
-   keeps itself up to date automatically on every login.
+3. The first time Kali boots, run the one-time in-guest setup — a single command:
+   `curl -fsS -o /tmp/setup.sh tftp://10.0.2.2/hodo-setup && bash /tmp/setup.sh` (installs the
+   agent, mounts the shared `/data` disk, sets up clipboard, reboots). After that the agent
+   keeps itself up to date automatically on every login. See
+   [docs/usage.md](docs/usage.md#first-time-inside-kali-run-once).
+4. Start a job with one command inside Kali: `target <ip-or-url> <name>` scaffolds the
+   engagement folder and opens the agent in it.
 
 Default Kali login is `kali` / `kali` — change it immediately with `passwd`.
 
