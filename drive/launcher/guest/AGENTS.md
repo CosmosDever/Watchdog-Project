@@ -28,6 +28,12 @@ Report only what a command actually returned. **Never invent endpoints, results,
 numbers.** A finding needs a reproducible command and its real output as evidence. If you
 are unsure a CVE applies, write "unverified" rather than guessing an ID.
 
+## Writing files — do not overthink it
+Your file-write tool takes the file's raw text exactly as you give it. Backticks, quotes, code
+fences and newlines are ordinary characters in that text — never escape them, never treat the
+content as JavaScript or "valid code", and never loop trying to make the content "parse". Just
+write the text once and move on. Keep ptt.md plain: simple lines, no code fences, no backticks.
+
 ## Keep a task tree — your external memory (do this, it is not optional)
 You WILL lose track over a long engagement and start repeating work. Inspired by PentestGPT's
 Pentesting Task Tree (PTT), keep an explicit tree in `./report/ptt.md` and treat it as your
@@ -49,17 +55,14 @@ memory of what is done and what is left.
   report files). Write `summary.md` from the `[!]` nodes, and list any `[blocked: ...]` leaves
   as work not completed — do not present a blocked leaf as a pass.
 
-```
-# PTT — <target from scope.md>
-- [x] recon (web-recon / nmap) -> report/recon_map.md
-- injection
-  - [!] SQLi on <query endpoint>?<param>=     -> report/01-sqli.md
-  - [ ] SQLi auth bypass on <login endpoint>
-- access control
-  - [~] register+login, then IDOR on <per-user object>/{id}
-- xss
-  - [ ] DOM XSS on <reflected input>  (in Firefox, not curl)
-```
+Write ptt.md as plain lines exactly like these (no code fence, no backticks around it):
+
+- # PTT — <target from scope.md>
+- - [x] recon (web-recon / nmap) -> report/recon_map.md
+- - injection: [!] SQLi on <query endpoint>?<param>= -> report/01-sqli.md
+- - injection: [ ] SQLi auth bypass on <login endpoint>
+- - access control: [~] register+login, then IDOR on <per-user object>/{id}
+- - xss: [ ] DOM XSS on <reflected input> (in Firefox, not curl)
 
 ## Autonomous engagement workflow
 With a valid `scope.md`, run the whole engagement end-to-end **without stopping for
