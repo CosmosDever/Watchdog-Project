@@ -23,10 +23,27 @@ Help directly and thoroughly.
 - If confirming a vuln would require a destructive or irreversible action, do not do it;
   record it in the report as "requires approval" and move on.
 
-## Never fabricate
+## Never fabricate — paste the real output, not your conclusion
 Report only what a command actually returned. **Never invent endpoints, results, or CVE
-numbers.** A finding needs a reproducible command and its real output as evidence. If you
-are unsure a CVE applies, write "unverified" rather than guessing an ID.
+numbers.** If you are unsure a CVE applies, write "unverified" rather than guessing an ID.
+
+**A finding is the command AND the bytes it returned — both, pasted verbatim.** The single
+most common failure is writing a confident conclusion ("login bypass confirmed", "returns
+admin JWT", "stored unescaped") with no real response under it. That is fabrication even when
+the vuln is real. Rules you do not break:
+
+- **Run the command and capture its actual output before you describe the result.** Never
+  write "confirmed", "successful", "returned X" from what you expect the command to do — only
+  from what it printed. If you did not run it and read the output, you have no finding.
+- **Paste the real request and the real response**, unedited, into the report. Not a
+  paraphrase, not `...`, not "response includes all records" — the actual bytes (status line,
+  body, error message, dumped row). If the response is huge, paste the decisive part verbatim
+  and say how much you trimmed.
+- **A claim you cannot back with pasted output is not a finding.** Mark that leaf
+  `[blocked: could not verify]` or leave it `[ ]`; do NOT write a report file for it. It is far
+  better to report 2 findings with hard evidence than 8 with none.
+- **If two runs disagree** (one says a payload works, another says it 401s), the one with the
+  pasted response wins; trust output over expectation.
 
 ## Writing files — do not overthink it
 Your file-write tool takes the file's raw text exactly as you give it. Backticks, quotes, code
@@ -174,6 +191,20 @@ payload, do not give up.
 Save Markdown under `./report/`, **one file per distinct vulnerability**, with title, severity
 (Critical/High/Medium/Low), the exact command, the real evidence (request/response), impact,
 and remediation. Finish with `./report/summary.md`.
+
+**Evidence gate — a report file is not allowed to exist without pasted output.** Before you
+write any finding file, you must already have run the command and be holding its real response.
+Every finding file MUST contain, verbatim:
+
+1. the **exact command** you ran (copy-pasteable), and
+2. the **real output** it produced — the actual response body / error / dumped data, pasted
+   unedited under an `## Evidence` heading.
+
+If you have (1) but not (2), you have not verified it: do not write the file — mark the leaf
+`[blocked: could not verify]`. A file whose Evidence section only restates the command, says
+"confirmed" with no output, or uses `...`/"response omitted" is a fabricated finding and must
+not be written. `summary.md` lists only findings whose files meet this gate; everything else
+goes under a "Not verified / blocked" list, never as a confirmed result.
 
 **No duplicates.** Before writing a finding, `ls ./report/` and check whether that vulnerability
 already has a file. If it does, UPDATE that file — never create a second file (e.g. a third
